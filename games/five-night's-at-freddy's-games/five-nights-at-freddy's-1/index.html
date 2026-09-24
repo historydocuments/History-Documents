@@ -29,6 +29,8 @@
             height: 100%;
         }
 
+        .back-button { position: fixed; top: 16px; left: 16px; z-index: 10000; background: #3498db; color: white; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-family: Arial, sans-serif; font-weight: bold; }
+
         a {
             text-decoration: none;
         }
@@ -127,6 +129,7 @@
 </head>
 
 <body>
+    <a class="back-button" href="../index.html" onclick="if (window.history.length > 1) { window.history.back(); return false; }">&larr; Back</a>
     <canvas id="MMFCanvas" width="1280" height="720"> Your browser does not support Canvas, Please try again.</canvas>
     <div class="selection" id="selection">
         <img id="title" src="resources/title.png">

@@ -6,6 +6,7 @@
     <style>
         :root { --paper: #f9f7f1; --ink: #2c2c2c; --accent: #8b4513; --border: #dcd7c9; }
         body { font-family: 'Georgia', serif; background-color: var(--paper); color: var(--ink); margin: 0; line-height: 1.6; }
+        .back-button { position: fixed; top: 16px; left: 16px; z-index: 1001; background: var(--accent); color: white; padding: 8px 14px; text-decoration: none; font-weight: bold; border-radius: 4px; }
         header { border-bottom: 3px double var(--accent); padding: 2rem 1rem; text-align: center; background: white; }
         nav { margin-top: 1rem; display: flex; justify-content: center; gap: 20px; }
         nav a, .menu-btn { text-decoration: none; color: var(--accent); font-weight: bold; text-transform: uppercase; font-size: 0.9rem; cursor: pointer; background: none; border: none; }
@@ -22,6 +23,8 @@
     </style>
 </head>
 <body>
+
+<a class="back-button" href="games/index.html" onclick="if (window.history.length > 1) { window.history.back(); return false; }">&larr; Back</a>
 
 <header>
     <h1>The Heritage Archive</h1>

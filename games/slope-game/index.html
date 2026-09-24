@@ -22,6 +22,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2541434264715219"
      crossorigin="anonymous"></script>
     <style>
+      .back-button { position: fixed; top: 16px; left: 16px; z-index: 10000; background: #0096FF; color: white; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-family: Arial, sans-serif; font-weight: bold; }
         .alert {
           padding: 20px;
           background-color: #0096FF;
@@ -54,6 +55,7 @@ Drop a star on the repo if you enjoy.
 --->
 
 <body style="margin: 0; overflow: hidden;">
+  <a class="back-button" href="../index.html" onclick="if (window.history.length > 1) { window.history.back(); return false; }">&larr; Back</a>
     <div class="alert">
         <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
         Want to play tetris? <a href="https://goldenn.dev/tetris/">Click here!</a> REMOVE ADS by clicking the white arrow below them!
