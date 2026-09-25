@@ -117,6 +117,7 @@
         <div id="game-list"></div>
     </div>
 
+    <script src="games-list.js"></script>
     <script>
         let allGames = [];
         const hosts = [
@@ -154,9 +155,8 @@
             } else {
                 // SERVER: Attempt to load games
                 try {
-                    const response = await fetch('games.json');
-                    if (!response.ok) throw new Error();
-                    allGames = await response.json();
+                    if (!Array.isArray(window.GAMES)) throw new Error('Game list was not generated');
+                    allGames = window.GAMES;
                     renderGames(allGames);
                     document.getElementById('main-content').style.display = 'flex';
                 } catch (err) {
