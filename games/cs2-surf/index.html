@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#111615" />
+    <link id="glizzy-favicon" rel="icon" type="image/gif" sizes="40x40" href="assets/sausage-sausage-flip-v3-D6JodEb-.gif" />
+    <meta
+      name="description"
+      content="Browser-playable Counter-Strike: Source surf maps with faithful geometry, collisions, and movement."
+    />
+    <title>Glizzy Surfer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="assets/index-DHEni1fS.js"></script>
+    <link rel="stylesheet" crossorigin href="assets/index-C6BbU6Ga.css">
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game" aria-label="Playable surf_mesa_fixed browser proof of concept"></canvas>
+
+      <section id="loading" class="modal-shell" aria-live="polite">
+        <div class="loading-stack">
+          <div class="modal-card loading-card">
+            <div class="loading-start">
+              <h1 id="loading-map-title">surf_mesa_fixed</h1>
+              <p id="loading-copy" class="lede">Loading the original map geometry…</p>
+              <div class="progress-track" aria-hidden="true"><span id="progress"></span></div>
+              <p id="loading-detail" class="micro">Preparing 212,120 visual triangles</p>
+              <button id="play" type="button" disabled>START SURF</button>
+            </div>
+            <div class="loading-settings">
+              <label id="poki-touch-setting" class="poki-touch-setting" for="poki-touch-mode" hidden>
+                <span>SURF CONTROLS</span>
+                <select id="poki-touch-mode">
+                  <option value="assisted" selected>Assisted</option>
+                  <option value="manual">Manual</option>
+                </select>
+              </label>
+              <label class="loading-range-setting mouse-sensitivity-setting" for="mouse-sensitivity">
+                <span>MOUSE SENSITIVITY</span>
+                <input id="mouse-sensitivity" type="range" min="0.1" max="2.5" step="0.05" value="1" />
+                <output id="mouse-sensitivity-value" for="mouse-sensitivity">1.00×</output>
+              </label>
+              <label class="loading-range-setting fov-setting" for="fov-setting">
+                <span>FIELD OF VIEW</span>
+                <input id="fov-setting" type="range" min="50" max="110" step="1" value="90" />
+                <output id="fov-setting-value" for="fov-setting">90°</output>
+              </label>
+              <label class="glizzy-hand-setting" for="glizzy-hand-enabled">
+                <input id="glizzy-hand-enabled" type="checkbox" checked />
+                <span>SHOW GLIZZY HAND</span>
+              </label>
+              <button id="golden-shop-open" class="golden-shop-link" type="button" hidden><span aria-hidden="true">✦</span> 24 KARAT GLIZZY <span>PREVIEW</span></button>
+            </div>
+            <p id="loading-map-credit" class="credit">Original map by Arblarg · fixed version by masog</p>
+            <section class="loading-leaderboard" aria-labelledby="loading-leaderboard-title">
+              <div class="loading-leaderboard-heading">
+                <span id="loading-leaderboard-title">TODAY'S LEADERBOARD</span>
+              </div>
+              <ol id="loading-leaderboard-list" class="leaderboard-list" aria-label="Today's top surf times" tabindex="0"></ol>
+              <p id="loading-leaderboard-empty" class="loading-leaderboard-empty">BE THE FIRST ON TODAY'S BOARD</p>
+            </section>
+            <section class="global-leaderboard" aria-label="Global map records">
+              <button
+                id="global-leaderboard-toggle"
+                class="global-leaderboard-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="global-leaderboard-panel"
+              >SEE GLOBAL LEADERBOARD</button>
+              <div id="global-leaderboard-panel" class="global-leaderboard-panel" hidden>
+                <div class="global-leaderboard-columns" aria-hidden="true">
+                  <span>MAP</span>
+                  <span>SURFER</span>
+                  <span>RUN</span>
+                  <span>TIME</span>
+                </div>
+                <ol id="global-leaderboard-list" class="leaderboard-list global-leaderboard-list" aria-label="Fastest replayable time for each map"></ol>
+                <p id="global-leaderboard-status" class="global-leaderboard-status">LOADING MAP RECORDS…</p>
+              </div>
+            </section>
+          </div>
+          <p class="project-credit">Project by <a href="https://offmylawn.com" target="_blank" rel="noopener noreferrer">offmylawn</a></p>
+        </div>
+      </section>
+
+      <dialog id="golden-shop" class="golden-shop" aria-labelledby="golden-title" aria-describedby="golden-description">
+        <button id="golden-shop-close" class="golden-close" type="button" aria-label="Close Golden Glizzy preview">×</button>
+        <div class="golden-preview-stage">
+          <span class="golden-edition">SUPPORTER EDITION / 24K</span>
+          <canvas id="golden-preview" width="316" height="400" aria-label="Animated preview of the golden glizzy hand"></canvas>
+          <span class="golden-preview-label">THE SAME GLIZZY. A LOT MORE GOLD.</span>
+        </div>
+        <div class="golden-shop-copy">
+          <p class="golden-eyebrow">A QUESTIONABLE LUXURY</p>
+          <h2 id="golden-title">24 Karat Glizzy</h2>
+          <p id="golden-description">Become a glillionaire. Still fall off the first ramp.</p>
+          <p class="golden-details">A golden hand with a little sparkle, yours in every run and replay. Your purchase supports Glizzy Surfer.</p>
+          <p class="golden-terms">One-time purchase · Cosmetic only · Gameplay stays free</p>
+          <button id="golden-purchase" class="golden-purchase" type="button" disabled>CHECKING OWNERSHIP…</button>
+          <label id="golden-equip-label" class="golden-equip" hidden><input id="golden-equip" type="checkbox" /> EQUIP GOLDEN GLIZZY</label>
+          <p id="golden-status" class="golden-status" role="status" aria-live="polite"></p>
+          <button id="golden-refresh" class="golden-refresh" type="button">RESTORE PURCHASE</button>
+        </div>
+      </dialog>
+
+      <section id="poki-map-select" class="modal-shell map-select-shell" aria-labelledby="poki-map-select-title" hidden>
+        <div class="modal-card map-select-card">
+          <p id="poki-map-select-eyebrow" class="eyebrow">SURF PAUSED</p>
+          <h2 id="poki-map-select-title">Glizzy Surfer</h2>
+          <p id="poki-map-select-copy" class="lede">One map. One permanent leaderboard.</p>
+          <label id="poki-pause-touch-setting" class="poki-touch-setting" for="poki-pause-touch-mode" hidden>
+            <span>SURF CONTROLS</span>
+            <select id="poki-pause-touch-mode">
+              <option value="assisted" selected>Assisted</option>
+              <option value="manual">Manual</option>
+            </select>
+          </label>
+          <button id="poki-resume" class="secondary-button poki-resume" type="button">RESUME SURF</button>
+          <button id="poki-privacy" class="text-button poki-privacy" type="button">PRIVACY</button>
+        </div>
+      </section>
+
+      <section id="finish-modal" class="modal-shell hidden" aria-live="assertive">
+        <div class="modal-card finish-card">
+          <p class="eyebrow success">RUN COMPLETE</p>
+          <h2 id="finish-time">00:00.000</h2>
+          <p id="finish-versus">You crossed the authored finish gate.</p>
+          <form id="score-form">
+            <label id="player-name-label" for="player-name">SURFER NAME</label>
+            <div class="submit-row">
+              <input id="player-name" name="player-name" maxlength="20" autocomplete="nickname" placeholder="Glizzy legend" required />
+              <button id="submit-score" type="submit">SUBMIT TIME</button>
+            </div>
+          </form>
+          <p id="submit-status" class="submit-status" aria-live="polite"></p>
+          <button id="run-again" class="secondary-button" type="button">RUN IT AGAIN</button>
+        </div>
+      </section>
+
+      <aside class="top-right-stack" aria-label="Daily run information">
+        <button id="poki-pause" class="poki-pause" type="button" hidden>PAUSE</button>
+        <section class="run-panel" aria-label="Run statistics">
+          <div class="primary-stat">
+            <span>CURRENT TIME</span>
+            <strong id="timer">00:00.000</strong>
+          </div>
+          <div class="attempt-stat">
+            <span>ATTEMPT</span>
+            <strong id="attempt">01</strong>
+          </div>
+          <div class="rotation-stat">
+            <span>NEXT MAP IN</span>
+            <strong id="next-map-countdown">--:--:--</strong>
+          </div>
+        </section>
+
+        <section class="leaderboard-panel" aria-label="Daily surf activity and best time">
+          <div class="leaderboard-heading">
+            <div class="activity-stats" aria-label="Today's surf activity" aria-live="polite">
+              <div class="activity-stat">
+                <span>UNIQUE SURFERS TODAY</span>
+                <strong id="daily-surfers">0</strong>
+              </div>
+              <div class="activity-stat">
+                <span>SURF ATTEMPTS TODAY</span>
+                <strong id="daily-attempts">0</strong>
+              </div>
+              <div class="activity-stat">
+                <span>ACTIVE SURFERS NOW</span>
+                <strong id="active-surfers">0</strong>
+              </div>
+            </div>
+            <div class="daily-best">
+              <span id="best-label">DAILY BEST</span>
+              <strong id="daily-best">--:--.---</strong>
+              <small id="daily-best-name">SET THE PACE</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="map-panel">
+          <span>NOW SURFING</span>
+          <strong id="current-map-title">surf_mesa_fixed</strong>
+          <small id="current-map-credit">Original map by Arblarg · fixed version by masog</small>
+        </section>
+
+        <section class="controls">
+          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span>
+          <span><kbd>SPACE</kbd> / <kbd>WHEEL</kbd> JUMP</span>
+          <span><kbd>SHIFT</kbd> CROUCH</span>
+          <span><kbd>R</kbd> RESET</span>
+          <span><kbd>C</kbd><kbd>V</kbd> FOV</span>
+          <span><kbd>Z</kbd> HAND</span>
+          <p id="status">Click the map to capture your mouse</p>
+        </section>
+        <div id="respawn-notice" class="respawn-notice" aria-live="polite">RUN RESET · BACK TO START</div>
+      </aside>
+
+      <div class="crosshair" aria-hidden="true">
+        <i></i><i></i>
+        <div class="crosshair-speed"><strong id="speed">000</strong><span>U/S</span></div>
+      </div>
+
+      <button id="use-portal" class="use-portal" type="button" hidden>USE PORTAL</button>
+
+      <section id="replay-banner" class="replay-banner" aria-live="polite" hidden>
+        <div>
+          <span id="replay-kind">DAILY REPLAY</span>
+          <strong id="replay-label">WATCHING #1</strong>
+        </div>
+        <button id="replay-download" type="button">DOWNLOAD CLIP</button>
+        <button id="replay-exit" type="button">EXIT REPLAY</button>
+      </section>
+
+      <section id="surf-chat" class="surf-chat" aria-label="Daily map chat" hidden>
+        <ol id="chat-messages" aria-live="polite" aria-label="Last five chat messages"></ol>
+        <button id="chat-open" type="button">ENTER TO CHAT</button>
+        <form id="chat-form" hidden>
+          <label id="chat-identity" for="chat-input">Surfer</label>
+          <input id="chat-input" maxlength="140" autocomplete="off" placeholder="Say something" />
+        </form>
+      </section>
+
+      <div id="desktop-steer-hint" class="desktop-steer-hint" hidden>
+        <strong>HOLD W + STEER WITH MOUSE</strong>
+        <span>Automatic strafing · A/D to override</span>
+      </div>
+      <div class="touch-controls" aria-label="Touch controls">
+        <div id="touch-move" class="touch-dpad" aria-label="Movement direction pad">
+          <button class="touch-direction touch-forward" type="button" data-touch-move="forward" aria-label="Move forward">▲</button>
+          <button class="touch-direction touch-left" type="button" data-touch-move="left" aria-label="Move left">◀</button>
+          <button class="touch-direction touch-right" type="button" data-touch-move="right" aria-label="Move right">▶</button>
+          <button class="touch-direction touch-back" type="button" data-touch-move="back" aria-label="Move backward">▼</button>
+        </div>
+        <div id="touch-look" class="touch-look" aria-label="Drag to look"></div>
+        <button id="touch-walk" class="touch-button touch-walk" type="button" aria-label="Hold to walk" aria-pressed="false" hidden>WALK</button>
+        <div id="touch-steer-hint" class="touch-steer-hint" hidden>
+          <strong>HOLD WALK · DRAG TO STEER</strong>
+          <span>Steer on the right · release WALK to coast</span>
+        </div>
+        <button id="touch-jump" class="touch-button touch-jump" type="button">JUMP</button>
+        <button id="touch-reset" class="touch-button touch-reset" type="button">RESET</button>
+      </div>
+
+      <img id="glizzy-sprite" class="glizzy-sprite" src="./glizzy-spinning.gif" alt="" aria-hidden="true" draggable="false" />
+      <canvas id="golden-hand" class="glizzy-sprite golden-hand" width="316" height="400" aria-hidden="true" hidden></canvas>
+    </main>
+  </body>
+</html>
