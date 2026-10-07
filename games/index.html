@@ -148,11 +148,11 @@
         <p style="margin-top: 20px; letter-spacing: 1px;">INITIALIZING SYSTEM...</p>
     </div>
 
-    <h1>🕹️ Arcade Hub</h1>
+    <h1>??? Arcade Hub</h1>
     <a class="chat-link" href="#community-chat">Community chat</a>
 
     <div id="host-section">
-        <h2 style="margin-top:0">🚀 Hosting Setup Required</h2>
+        <h2 style="margin-top:0">?? Hosting Setup Required</h2>
         <p>Local folders are currently blocked by your browser. Upload to a host to enable the library:</p>
         <div class="host-grid">
             <a href="https://app.netlify.com/drop/" id="link-netlify" target="_blank" class="btn recommended">Netlify Drop</a>
@@ -160,7 +160,7 @@
             <a href="https://github.com" id="link-github" target="_blank" class="btn">GitHub</a>
             <a href="https://vercel.com/" id="link-vercel" target="_blank" class="btn">Vercel</a>
             <a href="https://pages.cloudflare.com/" id="link-cloudflare" target="_blank" class="btn">Cloudflare</a>
-            <a href="https://www.google.com/search?q=free+static+html+hosting+alternatives" target="_blank" class="btn" style="background: #4285F4; color: white;">🔍 Search Alternatives</a>
+            <a href="https://www.google.com/search?q=free+static+html+hosting+alternatives" target="_blank" class="btn" style="background: #4285F4; color: white;">?? Search Alternatives</a>
         </div>
         <p class="github-note">Note: GitHub.com may work, but GitHub.io is often restricted.</p>
     </div>
@@ -168,7 +168,7 @@
     <div id="main-content">
         <div id="controls">
             <input type="text" id="search-bar" placeholder="Search library..." onkeyup="filterGames()">
-            <button id="random-btn" onclick="playRandom()">Shuffle 🎲</button>
+            <button id="random-btn" onclick="playRandom()">Shuffle ??</button>
         </div>
         <div id="game-list"></div>
     </div>
@@ -186,7 +186,7 @@
             <li id="chat-empty" class="chat-empty">The room is quiet. Start the conversation.</li>
         </ol>
         <form id="chat-composer" class="chat-composer">
-            <input name="name" type="text" maxlength="24" autocomplete="nickname" placeholder="Nickname" aria-label="Nickname" required disabled>
+            <input name="name" type="text" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="nickname" placeholder="Username (3-20 chars)" aria-label="Username, 3 to 20 letters, numbers, or underscores" title="Use 3 to 20 letters, numbers, or underscores." required disabled>
             <input name="text" type="text" maxlength="500" autocomplete="off" placeholder="Write a message" aria-label="Message" required disabled>
             <button type="submit" disabled>Send</button>
         </form>
@@ -262,7 +262,7 @@
                 card.href = `${folder}/index.html`;
                 card.className = 'game-card';
                 card.setAttribute('data-name', cleanName.toLowerCase());
-                card.innerHTML = `<div class="icon">🎮</div><div class="title">${cleanName}</div>`;
+                card.innerHTML = `<div class="icon">??</div><div class="title">${cleanName}</div>`;
                 container.appendChild(card);
             });
         }
@@ -287,7 +287,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { getDatabase, limitToLast, onChildAdded, push, query, ref, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+        import { getDatabase, limitToLast, onChildAdded, push, query, ref, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
         const form = document.getElementById("chat-composer");
         const nameInput = form.elements.name;
@@ -369,23 +369,39 @@
                     event.preventDefault();
                     const name = nameInput.value.trim();
                     const text = textInput.value.trim();
-                    if (!name || !text) return;
+                    if (!nameInput.reportValidity() || !text || !name) return;
 
                     sendButton.disabled = true;
                     notice.classList.remove("error");
                     notice.textContent = "Messages are public. Don't share personal information.";
                     try {
+                        const nameKey = name.toLowerCase();
+                        const claim = await runTransaction(ref(database, `usernames/${nameKey}`), (ownerUid) => {
+                            if (ownerUid === null || ownerUid === credentials.user.uid) {
+                                return credentials.user.uid;
+                            }
+                            return;
+                        });
+
+                        if (!claim.committed) {
+                            showError("That username is already taken. Choose another one.");
+                            return;
+                        }
+
+                        localStorage.setItem("arcade-chat-name", name);
                         await push(ref(database, "messages"), {
                             uid: credentials.user.uid,
                             name,
+                            nameKey,
                             text,
                             createdAt: serverTimestamp()
                         });
-                        localStorage.setItem("arcade-chat-name", name);
                         textInput.value = "";
                         textInput.focus();
                     } catch (error) {
-                        showError("Message could not be sent. Check the Firebase database rules and try again.");
+                        console.error("Chat message send failed", error);
+                        const reason = error.code || error.message || "Unknown Firebase error";
+                        showError(`Message could not be sent (${reason}). Check the Firebase setup and rules.`);
                     } finally {
                         sendButton.disabled = false;
                     }
