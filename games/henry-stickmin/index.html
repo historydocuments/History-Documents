@@ -55,13 +55,18 @@
         .selected-game h2 { margin: 0; font-size: 1.15rem; }
         .selected-game p { margin: 4px 0 0; color: var(--muted); font-size: 0.8rem; }
         .controls { display: flex; align-items: end; gap: 9px; }
+        .player-actions { display: flex; align-items: end; gap: 8px; }
         .version-field { display: grid; gap: 5px; color: var(--muted); font-size: 0.72rem; }
         .version-field select { width: min(390px, 38vw); min-height: 42px; padding: 0 34px 0 11px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink); }
         .version-field select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
         .launch-button { min-height: 42px; padding: 0 17px; border: 0; border-radius: 5px; background: var(--accent); color: var(--accent-ink); font-weight: 800; cursor: pointer; }
         .launch-button:hover:not(:disabled) { background: #ffc14d; }
         .launch-button:disabled { opacity: 0.6; cursor: wait; }
-        .stage { display: grid; place-items: center; width: 100%; min-height: 360px; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: #050708; }
+        .fullscreen-button { position: absolute; right: 12px; bottom: 12px; z-index: 3; min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 5px; background: #192127eF; color: var(--ink); font-weight: 700; cursor: pointer; }
+        .fullscreen-button:hover { border-color: var(--accent); }
+        .fullscreen-button[hidden] { display: none; }
+        .stage { position: relative; display: grid; place-items: center; width: 100%; min-height: 360px; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: #050708; }
+        .stage:fullscreen { width: 100vw; height: 100vh; min-height: 100vh; aspect-ratio: auto; border: 0; border-radius: 0; }
         .stage-message { max-width: 440px; padding: 24px; color: var(--muted); text-align: center; line-height: 1.55; }
         .stage-message strong { display: block; margin-bottom: 7px; color: var(--ink); font-size: 1.1rem; }
         .ruffle-player { display: block; width: 100%; height: 100%; }
@@ -129,11 +134,14 @@
                             <span>SWF file</span>
                             <select id="version-select"></select>
                         </label>
-                        <button id="launch-button" class="launch-button" type="button">Play</button>
+                        <div class="player-actions">
+                            <button id="launch-button" class="launch-button" type="button">Play</button>
+                        </div>
                     </div>
                 </div>
                 <div id="stage" class="stage" aria-live="polite">
                     <p class="stage-message"><strong>Ready when you are</strong>Put the 15 downloaded SWF files directly beside this page, then choose a version and press Play.</p>
+                    <button id="fullscreen-button" class="fullscreen-button" type="button" aria-label="Enter fullscreen" title="Enter fullscreen" hidden>Fullscreen</button>
                 </div>
                 <p id="player-status" class="player-status" role="status">Select a game file to start.</p>
             </section>
@@ -191,6 +199,7 @@
         const count = document.getElementById("selected-count");
         const versionSelect = document.getElementById("version-select");
         const launchButton = document.getElementById("launch-button");
+        const fullscreenButton = document.getElementById("fullscreen-button");
         const stage = document.getElementById("stage");
         const status = document.getElementById("player-status");
         let selectedGame = 0;
@@ -263,12 +272,14 @@
                 player.className = "ruffle-player";
                 player.setAttribute("aria-label", game.title);
                 stage.replaceChildren(player);
+                fullscreenButton.hidden = false;
                 status.textContent = `Loading ${entry.file}...`;
                 await player.load({ url: fileUrl });
                 status.textContent = `Playing ${game.title} - ${entry.label}`;
             } catch (error) {
                 console.error("Henry Stickmin game failed to load", error);
                 stage.replaceChildren();
+                fullscreenButton.hidden = true;
                 status.classList.add("error");
                 status.textContent = error.message || "The SWF could not be loaded.";
             } finally {
@@ -279,6 +290,24 @@
         renderGameChoices();
         selectGame(0);
         launchButton.addEventListener("click", launchGame);
+        fullscreenButton.addEventListener("click", async () => {
+            try {
+                if (document.fullscreenElement === stage) {
+                    await document.exitFullscreen();
+                } else {
+                    await stage.requestFullscreen();
+                }
+            } catch (error) {
+                status.classList.add("error");
+                status.textContent = "Fullscreen is unavailable in this browser.";
+            }
+        });
+        document.addEventListener("fullscreenchange", () => {
+            const isFullscreen = document.fullscreenElement === stage;
+            fullscreenButton.textContent = isFullscreen ? "Exit fullscreen" : "Fullscreen";
+            fullscreenButton.setAttribute("aria-label", isFullscreen ? "Exit fullscreen" : "Enter fullscreen");
+            fullscreenButton.title = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
+        });
     </script>
 </body>
 </html>
