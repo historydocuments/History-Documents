@@ -10,16 +10,12 @@
         header { border-bottom: 3px double var(--accent); padding: 2rem 1rem; text-align: center; background: white; }
         nav { margin-top: 1rem; display: flex; justify-content: center; gap: 20px; }
         nav a, .menu-btn { text-decoration: none; color: var(--accent); font-weight: bold; text-transform: uppercase; font-size: 0.9rem; cursor: pointer; background: none; border: none; }
+        nav .admin-login { opacity: 0.42; font-size: 0.72rem; }
+        nav .admin-login:hover, nav .admin-login:focus-visible { opacity: 1; }
+        nav .admin-login:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
         .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
         .doc-card { background: white; border: 1px solid var(--border); padding: 1.5rem; margin-bottom: 1.5rem; }
         .doc-link { color: #4a6fa5; text-decoration: none; font-style: italic; display: block; margin-top: 10px; }
-        
-        /* Modal Logic */
-        #loginModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: var(--paper); padding: 2.5rem; border: 2px solid var(--accent); width: 350px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); box-sizing: border-box; }
-        .btn { background: var(--accent); color: white; border: none; padding: 12px; cursor: pointer; width: 100%; font-weight: bold; }
-        .error { color: #b22222; font-size: 0.8rem; margin-bottom: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -31,7 +27,7 @@
     <nav>
         <a href="#">Collections</a>
         <a href="#">Research Guides</a>
-        <button class="menu-btn" onclick="toggleModal()">Sign In</button>
+        <a class="admin-login" href="games/index.html">Admin Login</a>
     </nav>
 </header>
 
@@ -47,40 +43,6 @@
         <a href="https://www.archives.gov/founding-docs/declaration-transcript" target="_blank" class="doc-link">View Transcript &rarr;</a>
     </div>
 </div>
-
-<div id="loginModal">
-    <div class="modal-content">
-        <h3>Administrator Login</h3>
-        <p id="errorMsg" class="error">Invalid credentials. Access Denied.</p>
-        <form id="loginForm">
-            <input type="email" id="email" placeholder="Admin Email" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit" class="btn">Access Dashboard</button>
-            <button type="button" onclick="toggleModal()" style="background:none; border:none; color:#777; margin-top:15px; cursor:pointer;">Close</button>
-        </form>
-    </div>
-</div>
-
-<script>
-    function toggleModal() {
-        const modal = document.getElementById('loginModal');
-        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
-    }
-
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const error = document.getElementById('errorMsg');
-
-        // Logic: Email ends with @admin.com AND password is admin123
-        if (email.toLowerCase().endsWith('@admin.com') && password === 'admin123') {
-            window.location.href = 'games/index.html';
-        } else {
-            error.style.display = 'block';
-        }
-    });
-</script>
 
 </body>
 </html>

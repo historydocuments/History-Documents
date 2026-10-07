@@ -60,6 +60,54 @@
         .blocked { background: var(--error) !important; color: white !important; cursor: not-allowed; }
         .github-note { color: var(--warning); font-size: 0.85rem; margin-top: 10px; font-style: italic; }
 
+        .chat-link { display: inline-block; margin: 0 0 24px; padding: 9px 15px; border: 1px solid var(--primary); border-radius: 6px; color: var(--primary); text-decoration: none; font-weight: 700; }
+        .chat-link:hover { background: var(--primary); color: #000; }
+
+        #community-chat {
+            --chat-panel: #1b241e;
+            --chat-muted: #a9b4aa;
+            --chat-line: #344239;
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 48px;
+            border: 1px solid var(--chat-line);
+            border-radius: 8px;
+            background: #151d18;
+            text-align: left;
+        }
+        .chat-heading { padding: 20px 20px 0; }
+        .chat-heading h2 { margin: 0 0 5px; color: var(--primary); }
+        .chat-heading p { margin: 0; color: var(--chat-muted); }
+        .chat-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 20px; border-bottom: 1px solid var(--chat-line); }
+        .chat-room-name { margin: 0; font-size: 0.95rem; }
+        .chat-connection { display: inline-flex; align-items: center; gap: 8px; color: var(--chat-muted); font-size: 0.8rem; }
+        .chat-connection::before { width: 8px; height: 8px; border-radius: 50%; background: #8b9690; content: ""; }
+        .chat-connection[data-state="live"]::before { background: var(--primary); box-shadow: 0 0 10px #00e88788; }
+        .chat-connection[data-state="error"] { color: #ff8b79; }
+        .chat-connection[data-state="error"]::before { background: #ff8b79; }
+        .chat-messages { display: flex; flex-direction: column; gap: 12px; height: min(54vh, 520px); min-height: 280px; margin: 0; padding: 18px; overflow-y: auto; list-style: none; }
+        .chat-empty { margin: auto; color: var(--chat-muted); text-align: center; }
+        .chat-message { max-width: min(86%, 540px); align-self: flex-start; }
+        .chat-message.mine { align-self: flex-end; }
+        .chat-message-meta { display: flex; align-items: baseline; gap: 9px; margin: 0 0 4px 3px; color: var(--chat-muted); font-size: 0.75rem; }
+        .chat-message-name { color: #f3c969; font-weight: 700; }
+        .chat-message.mine .chat-message-name { color: var(--primary); }
+        .chat-message-text { margin: 0; padding: 9px 12px; border: 1px solid var(--chat-line); border-radius: 4px 12px 12px; background: #222e26; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .chat-message.mine .chat-message-text { border-color: #176844; border-radius: 12px 4px 12px 12px; background: #143326; }
+        .chat-composer { display: grid; grid-template-columns: minmax(125px, 0.38fr) minmax(0, 1fr) auto; gap: 9px; padding: 14px; border-top: 1px solid var(--chat-line); background: var(--chat-panel); }
+        .chat-composer input, .chat-composer button { min-height: 44px; border: 1px solid var(--chat-line); border-radius: 5px; font: inherit; }
+        .chat-composer input { min-width: 0; padding: 0 12px; outline: none; background: #111713; color: var(--text); }
+        .chat-composer input:focus { border-color: var(--primary); }
+        .chat-composer input::placeholder { color: #7f8b81; }
+        .chat-composer button { padding: 0 18px; border-color: var(--primary); background: var(--primary); color: #062015; font-weight: 800; cursor: pointer; }
+        .chat-composer button:hover:not(:disabled) { background: #6dffbd; }
+        .chat-composer button:disabled, .chat-composer input:disabled { cursor: not-allowed; opacity: 0.55; }
+        .chat-notice { margin: 0; padding: 0 16px 14px; color: var(--chat-muted); font-size: 0.82rem; }
+        .chat-notice.error { color: #ff8b79; }
+        .chat-setup { margin: 16px; padding: 16px; border: 1px solid #735f2b; border-radius: 6px; background: #2a2619; color: #e1d9c4; line-height: 1.55; }
+        .chat-setup a { color: #f3c969; }
+        .chat-setup[hidden] { display: none; }
+
         #main-content { width: 100%; max-width: 1100px; flex-direction: column; align-items: center; }
         #controls { display: flex; gap: 10px; width: 100%; max-width: 600px; margin-bottom: 30px; }
         #search-bar {
@@ -82,6 +130,13 @@
             text-decoration: none; color: inherit;
         }
         .game-card:hover { transform: translateY(-5px); border-color: var(--primary); }
+
+        @media (max-width: 560px) {
+            .chat-composer { grid-template-columns: 1fr auto; }
+            .chat-composer input[name="name"] { grid-column: 1 / -1; }
+            .chat-composer input[name="text"] { grid-column: 1; }
+            .chat-composer button { grid-column: 2; grid-row: 2; }
+        }
     </style>
 </head>
 <body>
@@ -94,6 +149,7 @@
     </div>
 
     <h1>🕹️ Arcade Hub</h1>
+    <a class="chat-link" href="#community-chat">Community chat</a>
 
     <div id="host-section">
         <h2 style="margin-top:0">🚀 Hosting Setup Required</h2>
@@ -116,6 +172,29 @@
         </div>
         <div id="game-list"></div>
     </div>
+
+    <section id="community-chat" aria-labelledby="chat-title">
+        <div class="chat-heading">
+            <h2 id="chat-title">Community chat</h2>
+            <p>Say hello to everyone playing here.</p>
+        </div>
+        <div class="chat-panel-head">
+            <h3 class="chat-room-name"># general</h3>
+            <span id="chat-connection" class="chat-connection" data-state="connecting" role="status">Connecting</span>
+        </div>
+        <ol id="chat-messages" class="chat-messages" aria-live="polite" aria-relevant="additions">
+            <li id="chat-empty" class="chat-empty">The room is quiet. Start the conversation.</li>
+        </ol>
+        <form id="chat-composer" class="chat-composer">
+            <input name="name" type="text" maxlength="24" autocomplete="nickname" placeholder="Nickname" aria-label="Nickname" required disabled>
+            <input name="text" type="text" maxlength="500" autocomplete="off" placeholder="Write a message" aria-label="Message" required disabled>
+            <button type="submit" disabled>Send</button>
+        </form>
+        <p id="chat-notice" class="chat-notice">Messages are public. Don't share personal information.</p>
+        <aside id="chat-setup" class="chat-setup" hidden>
+            Chat needs a Firebase project. Follow <a href="../chat/README.md">the setup guide</a>, then reload this page.
+        </aside>
+    </section>
 
     <script src="games-list.js"></script>
     <script>
@@ -203,6 +282,122 @@
         }
 
         init();
+    </script>
+    <script src="../chat/chat-config.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { getDatabase, limitToLast, onChildAdded, push, query, ref, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+        const form = document.getElementById("chat-composer");
+        const nameInput = form.elements.name;
+        const textInput = form.elements.text;
+        const sendButton = form.querySelector("button");
+        const messageList = document.getElementById("chat-messages");
+        const emptyState = document.getElementById("chat-empty");
+        const connection = document.getElementById("chat-connection");
+        const notice = document.getElementById("chat-notice");
+        const config = window.CHAT_FIREBASE_CONFIG;
+        const isConfigured = config && ["apiKey", "authDomain", "databaseURL", "projectId", "appId"]
+            .every((key) => typeof config[key] === "string" && config[key].trim() !== "");
+
+        nameInput.value = localStorage.getItem("arcade-chat-name") || "";
+
+        function setStatus(label, state) {
+            connection.textContent = label;
+            connection.dataset.state = state;
+        }
+
+        function showError(message) {
+            notice.textContent = message;
+            notice.classList.add("error");
+        }
+
+        function addMessage(message, currentUid) {
+            emptyState.hidden = true;
+            const item = document.createElement("li");
+            item.className = `chat-message${message.uid === currentUid ? " mine" : ""}`;
+
+            const meta = document.createElement("p");
+            meta.className = "chat-message-meta";
+            const author = document.createElement("span");
+            author.className = "chat-message-name";
+            author.textContent = message.name || "Player";
+            const time = document.createElement("time");
+            const date = new Date(message.createdAt || Date.now());
+            time.dateTime = date.toISOString();
+            time.textContent = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+            meta.append(author, time);
+
+            const body = document.createElement("p");
+            body.className = "chat-message-text";
+            body.textContent = message.text || "";
+            item.append(meta, body);
+            messageList.append(item);
+
+            while (messageList.querySelectorAll(".chat-message").length > 100) {
+                messageList.querySelector(".chat-message").remove();
+            }
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+
+        async function connectChat() {
+            if (!isConfigured) {
+                setStatus("Setup required", "error");
+                document.getElementById("chat-setup").hidden = false;
+                showError("Chat is not connected yet. Complete the Firebase setup to enable messaging.");
+                return;
+            }
+
+            try {
+                const app = initializeApp(config);
+                const auth = getAuth(app);
+                const database = getDatabase(app);
+                const credentials = await signInAnonymously(auth);
+                const messages = query(ref(database, "messages"), limitToLast(100));
+
+                onChildAdded(messages, (snapshot) => addMessage(snapshot.val(), credentials.user.uid), (error) => {
+                    setStatus("Connection error", "error");
+                    showError(error.message);
+                });
+                nameInput.disabled = false;
+                textInput.disabled = false;
+                sendButton.disabled = false;
+                setStatus("Live", "live");
+
+                form.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    const name = nameInput.value.trim();
+                    const text = textInput.value.trim();
+                    if (!name || !text) return;
+
+                    sendButton.disabled = true;
+                    notice.classList.remove("error");
+                    notice.textContent = "Messages are public. Don't share personal information.";
+                    try {
+                        await push(ref(database, "messages"), {
+                            uid: credentials.user.uid,
+                            name,
+                            text,
+                            createdAt: serverTimestamp()
+                        });
+                        localStorage.setItem("arcade-chat-name", name);
+                        textInput.value = "";
+                        textInput.focus();
+                    } catch (error) {
+                        showError("Message could not be sent. Check the Firebase database rules and try again.");
+                    } finally {
+                        sendButton.disabled = false;
+                    }
+                });
+            } catch (error) {
+                console.error("Chat connection failed", error);
+                setStatus("Connection error", "error");
+                showError("Couldn't connect to chat. Check the setup guide, then reload the page.");
+            }
+        }
+
+        connectChat();
     </script>
 </body>
 </html>
