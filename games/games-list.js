@@ -1,0 +1,1 @@
+window.GAMES = ["1v1-lol","2048-game","baldis-basics","basket-random","boxing-random","classic-tetris","cs2-surf","drift-boss","fireboy-watergirl","fnaf-games","fortnite-shop","geometry-dash","google-snake","granny-horror","henry-stickmin","hole-io","monkey-mart","sand-tetris","slither-io","slope-game","snow-rider","soccer-random","stickman-hook","tube-jumpers","volley-random"];
