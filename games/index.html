@@ -148,11 +148,11 @@
         <p style="margin-top: 20px; letter-spacing: 1px;">INITIALIZING SYSTEM...</p>
     </div>
 
-    <h1>??? Arcade Hub</h1>
+    <h1>🕹️ Arcade Hub</h1>
     <a class="chat-link" href="#community-chat">Community chat</a>
 
     <div id="host-section">
-        <h2 style="margin-top:0">?? Hosting Setup Required</h2>
+        <h2 style="margin-top:0">🚀 Hosting Setup Required</h2>
         <p>Local folders are currently blocked by your browser. Upload to a host to enable the library:</p>
         <div class="host-grid">
             <a href="https://app.netlify.com/drop/" id="link-netlify" target="_blank" class="btn recommended">Netlify Drop</a>
@@ -160,7 +160,7 @@
             <a href="https://github.com" id="link-github" target="_blank" class="btn">GitHub</a>
             <a href="https://vercel.com/" id="link-vercel" target="_blank" class="btn">Vercel</a>
             <a href="https://pages.cloudflare.com/" id="link-cloudflare" target="_blank" class="btn">Cloudflare</a>
-            <a href="https://www.google.com/search?q=free+static+html+hosting+alternatives" target="_blank" class="btn" style="background: #4285F4; color: white;">?? Search Alternatives</a>
+            <a href="https://www.google.com/search?q=free+static+html+hosting+alternatives" target="_blank" class="btn" style="background: #4285F4; color: white;">🔍 Search Alternatives</a>
         </div>
         <p class="github-note">Note: GitHub.com may work, but GitHub.io is often restricted.</p>
     </div>
@@ -168,7 +168,7 @@
     <div id="main-content">
         <div id="controls">
             <input type="text" id="search-bar" placeholder="Search library..." onkeyup="filterGames()">
-            <button id="random-btn" onclick="playRandom()">Shuffle ??</button>
+            <button id="random-btn" onclick="playRandom()">Shuffle 🎲</button>
         </div>
         <div id="game-list"></div>
     </div>
@@ -262,7 +262,7 @@
                 card.href = `${folder}/index.html`;
                 card.className = 'game-card';
                 card.setAttribute('data-name', cleanName.toLowerCase());
-                card.innerHTML = `<div class="icon">??</div><div class="title">${cleanName}</div>`;
+                card.innerHTML = `<div class="icon">🎮</div><div class="title">${cleanName}</div>`;
                 container.appendChild(card);
             });
         }
