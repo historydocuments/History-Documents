@@ -14,6 +14,20 @@
             --warning: #ffa502;
         }
 
+        body[data-theme="ocean"] {
+            --primary: #58d3e5;
+            --bg: #102027;
+            --card-bg: #1b3038;
+            --text: #e2f1f4;
+        }
+
+        body[data-theme="ember"] {
+            --primary: #ff9a62;
+            --bg: #211815;
+            --card-bg: #30221d;
+            --text: #f4e8df;
+        }
+
         /* Full Screen Loading Overlay */
         #loader {
             position: fixed;
@@ -37,8 +51,56 @@
             font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); 
             padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center;
         }
-        .back-button { position: fixed; top: 16px; left: 16px; z-index: 10000; background: var(--primary); color: #000; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: bold; }
-
+        #arcade-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 1100px; margin-bottom: 16px; }
+        #arcade-header h1 { margin: 0; }
+        .settings-toggle, .viewer-back {
+            min-height: 42px; padding: 0 14px; border: 1px solid #444; border-radius: 6px;
+            background: var(--card-bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer;
+        }
+        .settings-toggle { border-color: var(--primary); color: var(--primary); }
+        .settings-toggle:hover { background: var(--primary); color: #07150e; }
+        .settings-dialog {
+            width: min(440px, calc(100vw - 32px)); max-height: min(82vh, 680px); overflow: auto;
+            padding: 0; border: 1px solid #3b4941; border-radius: 12px; background: #151d18;
+            color: #edf4ef; box-shadow: 0 24px 80px #000a;
+        }
+        .settings-dialog::backdrop { background: #050907c9; backdrop-filter: blur(5px); }
+        .settings-dialog-inner { padding: 24px; }
+        .settings-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 26px; }
+        .settings-eyebrow { margin: 0 0 5px; color: var(--primary); font-size: 0.7rem; font-weight: 800; }
+        .settings-dialog-header h2 { margin: 0; font-size: 1.35rem; }
+        .settings-close { width: 36px; height: 36px; border: 1px solid #39453e; border-radius: 6px; background: #202a24; color: #edf4ef; font-size: 1.2rem; cursor: pointer; }
+        .settings-group { min-width: 0; margin: 0; padding: 0; border: 0; }
+        .settings-group + .settings-group { margin-top: 25px; }
+        .settings-group legend { margin-bottom: 11px; color: #dce8df; font-size: 0.86rem; font-weight: 750; }
+        .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .theme-option { display: grid; justify-items: start; gap: 10px; padding: 12px; border: 1px solid #354139; border-radius: 7px; background: #101713; color: #e4ece6; font-size: 0.8rem; cursor: pointer; }
+        .theme-option input, .back-mode-option input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+        .theme-option:has(input:checked), .back-mode-option:has(input:checked) { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+        .theme-option:focus-within, .back-mode-option:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .theme-swatch { width: 24px; height: 24px; border-radius: 50%; background: var(--theme-swatch); box-shadow: 0 0 0 3px #ffffff12; }
+        .back-mode-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border: 1px solid #354139; border-radius: 8px; background: #0e1410; }
+        .back-mode-option { position: relative; display: grid; min-height: 40px; place-items: center; border: 1px solid transparent; border-radius: 5px; color: #c0cec4; font-size: 0.78rem; cursor: pointer; }
+        .back-mode-option:has(input:checked) { background: #24342a; color: #f3fff6; }
+        .settings-panel-note { margin: 24px 0 0; color: #9eaea3; font-size: 0.78rem; }
+        .game-view { position: fixed; inset: 0; z-index: 10000; background: #000; }
+        .game-view[hidden] { display: none; }
+        #game-frame { display: block; width: 100%; height: 100%; border: 0; background: #000; }
+        .viewer-controls { position: absolute; top: 14px; left: 14px; z-index: 1; display: flex; width: max-content; }
+        .viewer-back { position: relative; border: 0; background: var(--primary); color: #07150e; }
+        .viewer-hint {
+            position: absolute; top: 17px; right: 16px; z-index: 1; max-width: min(420px, calc(100vw - 32px));
+            margin: 0; padding: 9px 12px; border: 1px solid #ffffff38; border-radius: 6px;
+            background: #101713d9; color: #f2f5f2; font-size: 0.82rem; opacity: 0; visibility: hidden;
+        }
+        .viewer-hint.is-visible { animation: viewer-hint-fade 5s ease forwards; }
+        @keyframes viewer-hint-fade {
+            0%, 80% { opacity: 1; visibility: visible; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+        body[data-back-button="hover"] .viewer-controls:not(:hover):not(:focus-within) .viewer-back { opacity: 0; }
+        body[data-back-button="off"] .viewer-back { display: none; }
+        button:focus-visible, .settings-dialog input:focus-visible, select:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
         /* Hide content until script decides what to show */
         #host-section, #main-content { display: none; }
 
@@ -102,6 +164,33 @@
         .chat-composer button { padding: 0 18px; border-color: var(--primary); background: var(--primary); color: #062015; font-weight: 800; cursor: pointer; }
         .chat-composer button:hover:not(:disabled) { background: #6dffbd; }
         .chat-composer button:disabled, .chat-composer input:disabled { cursor: not-allowed; opacity: 0.55; }
+        .chat-account { border-bottom: 1px solid var(--chat-line); }
+        .account-controls { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(140px, 1fr) auto auto auto; gap: 8px; padding: 14px 16px 8px; }
+        .account-controls input, .account-controls button { min-width: 0; min-height: 40px; border: 1px solid var(--chat-line); border-radius: 5px; font: inherit; }
+        .account-controls input { padding: 0 10px; background: #111713; color: var(--text); }
+        .account-controls input::placeholder { color: #7f8b81; }
+        .account-controls button { padding: 0 12px; border-color: var(--primary); background: var(--primary); color: #062015; font-weight: 750; cursor: pointer; }
+        .account-controls button.secondary { border-color: var(--chat-line); background: transparent; color: var(--text); }
+        .account-controls button:disabled { cursor: not-allowed; opacity: 0.5; }
+        #account-sign-out[hidden] { display: none; }
+        .account-status { margin: 0; padding: 0 16px 12px; color: var(--chat-muted); font-size: 0.78rem; }
+        .account-status.error { color: #ff8b79; }
+        .admin-panel { margin: 16px; padding: 16px; border: 1px solid #866e35; border-radius: 6px; background: #282417; }
+        .admin-panel[hidden] { display: none; }
+        .admin-panel h3 { margin: 0 0 6px; color: #f2d77f; font-size: 0.9rem; }
+        .admin-panel p { margin: 0 0 12px; color: #c9c0a5; font-size: 0.8rem; }
+        .admin-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+        .admin-controls textarea { min-height: 44px; max-height: 140px; resize: vertical; padding: 10px 12px; border: 1px solid #574d32; border-radius: 5px; background: #17150f; color: #f8f1da; font: inherit; }
+        .admin-controls button { padding: 0 14px; border: 1px solid #f2d77f; border-radius: 5px; background: #f2d77f; color: #221d0b; font-weight: 800; cursor: pointer; }
+        .admin-controls button:disabled { cursor: wait; opacity: 0.6; }
+        .admin-status { margin: 9px 0 0 !important; color: #c9c0a5; }
+        .admin-status.error { color: #ff9a8c; }
+        .announcement-banner { position: fixed; top: 14px; left: 50%; z-index: 11000; display: flex; align-items: flex-start; gap: 12px; width: min(720px, calc(100vw - 28px)); box-sizing: border-box; padding: 14px 14px 14px 16px; transform: translateX(-50%); border: 1px solid color-mix(in srgb, var(--primary), white 24%); border-radius: 8px; background: #101713f2; color: #f2f5f2; box-shadow: 0 14px 42px #0009; }
+        .announcement-banner[hidden] { display: none; }
+        .announcement-copy { min-width: 0; flex: 1; }
+        .announcement-label { display: block; margin-bottom: 4px; color: var(--primary); font-size: 0.68rem; font-weight: 900; }
+        #announcement-text { margin: 0; overflow-wrap: anywhere; font-size: 0.92rem; line-height: 1.4; }
+        .announcement-dismiss { width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid #ffffff38; border-radius: 5px; background: transparent; color: white; font-size: 1.15rem; cursor: pointer; }
         .chat-notice { margin: 0; padding: 0 16px 14px; color: var(--chat-muted); font-size: 0.82rem; }
         .chat-notice.error { color: #ff8b79; }
         .chat-setup { margin: 16px; padding: 16px; border: 1px solid #735f2b; border-radius: 6px; background: #2a2619; color: #e1d9c4; line-height: 1.55; }
@@ -132,6 +221,11 @@
         .game-card:hover { transform: translateY(-5px); border-color: var(--primary); }
 
         @media (max-width: 560px) {
+            #arcade-header { align-items: flex-start; }
+            #arcade-header h1 { font-size: 1.25rem; }
+            .settings-dialog-inner { padding: 20px; }
+            .account-controls { grid-template-columns: 1fr 1fr; }
+            .account-controls input { grid-column: 1 / -1; }
             .chat-composer { grid-template-columns: 1fr auto; }
             .chat-composer input[name="name"] { grid-column: 1 / -1; }
             .chat-composer input[name="text"] { grid-column: 1; }
@@ -140,15 +234,52 @@
     </style>
 </head>
 <body>
-
-    <a class="back-button" href="../index.html" onclick="if (window.history.length > 1) { window.history.back(); return false; }">&larr; Back</a>
-
     <div id="loader">
         <div class="spinner"></div>
         <p style="margin-top: 20px; letter-spacing: 1px;">INITIALIZING SYSTEM...</p>
     </div>
 
-    <h1>🕹️ Arcade Hub</h1>
+    <header id="arcade-header">
+        <h1>🕹️ Arcade Hub</h1>
+        <button id="settings-toggle" class="settings-toggle" type="button" aria-controls="settings-dialog">&#9881; Settings</button>
+    </header>
+    <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+        <div class="settings-dialog-inner">
+            <header class="settings-dialog-header">
+                <div>
+                    <p class="settings-eyebrow">ARCADE PREFERENCES</p>
+                    <h2 id="settings-title">Settings</h2>
+                </div>
+                <button id="settings-close" class="settings-close" type="button" aria-label="Close settings">&times;</button>
+            </header>
+            <fieldset class="settings-group">
+                <legend>Color theme</legend>
+                <div class="theme-options">
+                    <label class="theme-option" style="--theme-swatch: #00ff88">
+                        <input type="radio" name="theme" value="emerald">
+                        <span class="theme-swatch" aria-hidden="true"></span><span>Emerald</span>
+                    </label>
+                    <label class="theme-option" style="--theme-swatch: #58d3e5">
+                        <input type="radio" name="theme" value="ocean">
+                        <span class="theme-swatch" aria-hidden="true"></span><span>Ocean</span>
+                    </label>
+                    <label class="theme-option" style="--theme-swatch: #ff9a62">
+                        <input type="radio" name="theme" value="ember">
+                        <span class="theme-swatch" aria-hidden="true"></span><span>Ember</span>
+                    </label>
+                </div>
+            </fieldset>
+            <fieldset class="settings-group">
+                <legend>Back button</legend>
+                <div class="back-mode-options">
+                    <label class="back-mode-option"><input type="radio" name="back-button-mode" value="on"><span>On</span></label>
+                    <label class="back-mode-option"><input type="radio" name="back-button-mode" value="hover"><span>On hover</span></label>
+                    <label class="back-mode-option"><input type="radio" name="back-button-mode" value="off"><span>Off</span></label>
+                </div>
+            </fieldset>
+            <p class="settings-panel-note">Preferences are saved on this device.</p>
+        </div>
+    </dialog>
     <a class="chat-link" href="#community-chat">Community chat</a>
 
     <div id="host-section">
@@ -173,15 +304,50 @@
         <div id="game-list"></div>
     </div>
 
+    <section id="game-view" class="game-view" aria-label="Game viewer" hidden>
+        <iframe id="game-frame" title="Selected game" allow="fullscreen; autoplay; gamepad"></iframe>
+        <div class="viewer-controls">
+            <button id="viewer-back" class="viewer-back" type="button">&larr; Back to games</button>
+        </div>
+        <p id="viewer-hint" class="viewer-hint">Back button visibility can be changed in Arcade Settings. Browser Back also exits the game.</p>
+    </section>
+
+    <aside id="announcement-banner" class="announcement-banner" role="status" aria-live="polite" hidden>
+        <div class="announcement-copy">
+            <span class="announcement-label">ARCADE NOTICE</span>
+            <p id="announcement-text"></p>
+        </div>
+        <button id="announcement-dismiss" class="announcement-dismiss" type="button" aria-label="Dismiss announcement">&times;</button>
+    </aside>
+
     <section id="community-chat" aria-labelledby="chat-title">
         <div class="chat-heading">
             <h2 id="chat-title">Community chat</h2>
-            <p>Say hello to everyone playing here.</p>
+            <p>No login required. Pick a name and start chatting as a guest. Create an account only if you want to save your name for next time.</p>
         </div>
         <div class="chat-panel-head">
             <h3 class="chat-room-name"># general</h3>
             <span id="chat-connection" class="chat-connection" data-state="connecting" role="status">Connecting</span>
         </div>
+        <div class="chat-account">
+            <form id="account-form" class="account-controls">
+                <input id="account-email" type="email" autocomplete="username" placeholder="Email address" aria-label="Account email" required disabled>
+                <input id="account-password" type="password" autocomplete="current-password" minlength="6" placeholder="Password (6+ characters)" aria-label="Account password" required disabled>
+                <button id="account-create" type="button" disabled>Create account</button>
+                <button id="account-login" type="button" disabled>Log in</button>
+                <button id="account-sign-out" class="secondary" type="button" hidden disabled>Sign out</button>
+            </form>
+            <p id="account-status" class="account-status" role="status" aria-live="polite">Create an account to keep your chat name when you return.</p>
+        </div>
+        <section id="admin-panel" class="admin-panel" aria-labelledby="admin-title" hidden>
+            <h3 id="admin-title">Admin broadcast</h3>
+            <p>Send a notice to everyone currently on the arcade, including players in a game.</p>
+            <form id="admin-form" class="admin-controls">
+                <textarea id="admin-message" maxlength="240" placeholder="Write an arcade-wide notice" aria-label="Announcement message" required></textarea>
+                <button id="admin-send" type="submit">Send notice</button>
+            </form>
+            <p id="admin-status" class="admin-status" role="status" aria-live="polite"></p>
+        </section>
         <ol id="chat-messages" class="chat-messages" aria-live="polite" aria-relevant="additions">
             <li id="chat-empty" class="chat-empty">The room is quiet. Start the conversation.</li>
         </ol>
@@ -206,6 +372,55 @@
             { id: 'link-vercel', url: 'https://vercel.com' },
             { id: 'link-cloudflare', url: 'https://pages.cloudflare.com' }
         ];
+        const settingsToggle = document.getElementById('settings-toggle');
+        const settingsDialog = document.getElementById('settings-dialog');
+        const themeRadios = document.querySelectorAll('input[name="theme"]');
+        const backButtonRadios = document.querySelectorAll('input[name="back-button-mode"]');
+        const gameView = document.getElementById('game-view');
+        const gameFrame = document.getElementById('game-frame');
+        const viewerHint = document.getElementById('viewer-hint');
+
+        function readPreference(key, fallback) {
+            try {
+                return localStorage.getItem(key) || fallback;
+            } catch {
+                return fallback;
+            }
+        }
+
+        function savePreference(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch {}
+        }
+
+        function applyPreferences() {
+            const savedTheme = readPreference('arcade-theme', 'emerald');
+            const savedBackButtonMode = readPreference('arcade-back-button', 'on');
+            const theme = ['emerald', 'ocean', 'ember'].includes(savedTheme) ? savedTheme : 'emerald';
+            const backButton = ['on', 'hover', 'off'].includes(savedBackButtonMode) ? savedBackButtonMode : 'on';
+
+            document.body.dataset.theme = theme;
+            document.body.dataset.backButton = backButton;
+            document.querySelector(`input[name="theme"][value="${theme}"]`).checked = true;
+            document.querySelector(`input[name="back-button-mode"][value="${backButton}"]`).checked = true;
+        }
+
+        settingsToggle.addEventListener('click', () => settingsDialog.showModal());
+        document.getElementById('settings-close').addEventListener('click', () => settingsDialog.close());
+        settingsDialog.addEventListener('click', (event) => {
+            if (event.target === settingsDialog) settingsDialog.close();
+        });
+
+        themeRadios.forEach((radio) => radio.addEventListener('change', () => {
+            document.body.dataset.theme = radio.value;
+            savePreference('arcade-theme', radio.value);
+        }));
+
+        backButtonRadios.forEach((radio) => radio.addEventListener('change', () => {
+            document.body.dataset.backButton = radio.value;
+            savePreference('arcade-back-button', radio.value);
+        }));
 
         async function checkSiteStatus() {
             const statusPromises = hosts.map(async (host) => {
@@ -224,9 +439,8 @@
             await Promise.all(statusPromises);
         }
 
-        async function init() {
-            // Start checking site statuses immediately
-            const hostCheck = checkSiteStatus();
+        function init() {
+            checkSiteStatus();
 
             if (window.location.protocol === 'file:') {
                 // LOCAL: Show host setup
@@ -244,10 +458,6 @@
                 }
             }
 
-            // Wait for host pings to finish before hiding loader
-            await hostCheck;
-            
-            // Remove the loader
             const loader = document.getElementById('loader');
             loader.style.opacity = '0';
             setTimeout(() => loader.style.display = 'none', 500);
@@ -263,9 +473,42 @@
                 card.className = 'game-card';
                 card.setAttribute('data-name', cleanName.toLowerCase());
                 card.innerHTML = `<div class="icon">🎮</div><div class="title">${cleanName}</div>`;
+                card.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    openGame(folder, cleanName);
+                });
                 container.appendChild(card);
             });
         }
+
+        function openGame(folder, title) {
+            const game = { folder, title };
+            history.pushState({ arcadeGame: game }, '', `#game/${encodeURIComponent(folder)}`);
+            showGame(game);
+        }
+
+        function showGame(game) {
+            gameFrame.src = `${game.folder}/index.html`;
+            gameFrame.title = game.title;
+            gameView.hidden = false;
+            viewerHint.classList.remove('is-visible');
+            void viewerHint.offsetWidth;
+            viewerHint.classList.add('is-visible');
+        }
+
+        function closeGame() {
+            gameView.hidden = true;
+            gameFrame.src = 'about:blank';
+        }
+
+        document.getElementById('viewer-back').addEventListener('click', () => history.back());
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.arcadeGame) {
+                showGame(event.state.arcadeGame);
+            } else {
+                closeGame();
+            }
+        });
 
         function filterGames() {
             const query = document.getElementById('search-bar').value.toLowerCase();
@@ -277,17 +520,19 @@
         function playRandom() {
             if (allGames.length > 0) {
                 const randomFolder = allGames[Math.floor(Math.random() * allGames.length)];
-                window.location.href = `${randomFolder}/index.html`;
+                const cleanName = randomFolder.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                openGame(randomFolder, cleanName);
             }
         }
 
+        applyPreferences();
         init();
     </script>
     <script src="../chat/chat-config.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { getDatabase, limitToLast, onChildAdded, push, query, ref, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+        import { EmailAuthProvider, getAuth, linkWithCredential, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, runTransaction, serverTimestamp, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
         const form = document.getElementById("chat-composer");
         const nameInput = form.elements.name;
@@ -297,9 +542,28 @@
         const emptyState = document.getElementById("chat-empty");
         const connection = document.getElementById("chat-connection");
         const notice = document.getElementById("chat-notice");
+        const accountForm = document.getElementById("account-form");
+        const accountEmail = document.getElementById("account-email");
+        const accountPassword = document.getElementById("account-password");
+        const accountCreate = document.getElementById("account-create");
+        const accountLogin = document.getElementById("account-login");
+        const accountSignOut = document.getElementById("account-sign-out");
+        const accountStatus = document.getElementById("account-status");
+        const adminPanel = document.getElementById("admin-panel");
+        const adminForm = document.getElementById("admin-form");
+        const adminMessage = document.getElementById("admin-message");
+        const adminSend = document.getElementById("admin-send");
+        const adminStatus = document.getElementById("admin-status");
+        const announcementBanner = document.getElementById("announcement-banner");
+        const announcementText = document.getElementById("announcement-text");
         const config = window.CHAT_FIREBASE_CONFIG;
         const isConfigured = config && ["apiKey", "authDomain", "databaseURL", "projectId", "appId"]
             .every((key) => typeof config[key] === "string" && config[key].trim() !== "");
+        let auth;
+        let database;
+        let currentUid;
+        let isAdmin = false;
+        let announcementTimer;
 
         nameInput.value = localStorage.getItem("arcade-chat-name") || "";
 
@@ -311,6 +575,91 @@
         function showError(message) {
             notice.textContent = message;
             notice.classList.add("error");
+        }
+
+        function setAccountStatus(message, isError = false) {
+            accountStatus.textContent = message;
+            accountStatus.classList.toggle("error", isError);
+        }
+
+        function updateAccountControls(user, busy = false) {
+            const isGuest = !user || user.isAnonymous;
+            accountCreate.disabled = busy || !isGuest;
+            accountLogin.disabled = busy || !isGuest;
+            accountEmail.disabled = busy || !isGuest;
+            accountPassword.disabled = busy || !isGuest;
+            accountSignOut.hidden = isGuest;
+            accountSignOut.disabled = busy || isGuest;
+        }
+
+        function authErrorMessage(error) {
+            if (error.code === "chat/username-taken") return "That chat name is already in use. Choose another name, then send a message to save it.";
+            if (error.code === "auth/email-already-in-use") return "That email already has an account. Log in instead.";
+            if (["auth/invalid-credential", "auth/user-not-found", "auth/wrong-password"].includes(error.code)) return "That email and password don't match an account.";
+            if (error.code === "auth/weak-password") return "Choose a password with at least 6 characters.";
+            if (error.code === "auth/operation-not-allowed") return "Email/password login isn't enabled in Firebase yet. See the chat setup guide.";
+            if (error.code === "auth/credential-already-in-use") return "That email belongs to another account. Log in with it instead.";
+            return `Account action failed (${error.code || error.message || "unknown error"}).`;
+        }
+
+        function setAdminStatus(message, isError = false) {
+            adminStatus.textContent = message;
+            adminStatus.classList.toggle("error", isError);
+        }
+
+        async function updateAdminAccess(user) {
+            isAdmin = false;
+            adminPanel.hidden = true;
+            if (!user || user.isAnonymous) return;
+
+            try {
+                const snapshot = await get(ref(database, `admins/${user.uid}`));
+                isAdmin = snapshot.val() === true;
+                adminPanel.hidden = !isAdmin;
+                if (isAdmin) setAdminStatus("Admin access verified.");
+            } catch (error) {
+                setAdminStatus("Admin access could not be checked. Review the Firebase rules in the setup guide.", true);
+            }
+        }
+
+        function showAnnouncement(announcement) {
+            const message = announcement && typeof announcement.text === "string" ? announcement.text.trim() : "";
+            const age = Date.now() - Number(announcement && announcement.createdAt);
+            if (!message || !Number.isFinite(age) || age < -10000 || age > 30000) {
+                announcementBanner.hidden = true;
+                return;
+            }
+
+            announcementText.textContent = message;
+            announcementBanner.hidden = false;
+            clearTimeout(announcementTimer);
+            announcementTimer = setTimeout(() => { announcementBanner.hidden = true; }, 15000);
+        }
+
+        async function loadChatProfile(user) {
+            const snapshot = await get(ref(database, `profiles/${user.uid}`));
+            const profile = snapshot.val();
+            if (!profile || typeof profile.name !== "string") return null;
+            nameInput.value = profile.name;
+            localStorage.setItem("arcade-chat-name", profile.name);
+            return profile;
+        }
+
+        async function claimChatName(user) {
+            const name = nameInput.value.trim();
+            if (!nameInput.reportValidity()) throw new Error("Enter a valid chat name first.");
+            const nameKey = name.toLowerCase();
+            const claim = await runTransaction(ref(database, `usernames/${nameKey}`), (ownerUid) => {
+                if (ownerUid === null || ownerUid === user.uid) return user.uid;
+                return;
+            });
+            if (!claim.committed) {
+                const error = new Error("Chat name is already in use.");
+                error.code = "chat/username-taken";
+                throw error;
+            }
+            await set(ref(database, `profiles/${user.uid}`), { name, nameKey });
+            localStorage.setItem("arcade-chat-name", name);
         }
 
         function addMessage(message, currentUid) {
@@ -351,19 +700,134 @@
 
             try {
                 const app = initializeApp(config);
-                const auth = getAuth(app);
-                const database = getDatabase(app);
-                const credentials = await signInAnonymously(auth);
+                auth = getAuth(app);
+                database = getDatabase(app);
+                let user = await new Promise((resolve, reject) => {
+                    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+                        unsubscribe();
+                        resolve(currentUser);
+                    }, reject);
+                });
+                if (!user) user = (await signInAnonymously(auth)).user;
+                currentUid = user.uid;
                 const messages = query(ref(database, "messages"), limitToLast(100));
 
-                onChildAdded(messages, (snapshot) => addMessage(snapshot.val(), credentials.user.uid), (error) => {
+                onChildAdded(messages, (snapshot) => addMessage(snapshot.val(), currentUid), (error) => {
                     setStatus("Connection error", "error");
                     showError(error.message);
+                });
+                onValue(ref(database, "announcement"), (snapshot) => showAnnouncement(snapshot.val()), (error) => {
+                    console.warn("Announcement listener failed", error);
+                });
+                document.getElementById("announcement-dismiss").addEventListener("click", () => {
+                    clearTimeout(announcementTimer);
+                    announcementBanner.hidden = true;
                 });
                 nameInput.disabled = false;
                 textInput.disabled = false;
                 sendButton.disabled = false;
+                accountEmail.disabled = false;
+                accountPassword.disabled = false;
+                updateAccountControls(user);
+                await updateAdminAccess(user);
+
+                if (!user.isAnonymous) {
+                    try {
+                        const profile = await loadChatProfile(user);
+                        setAccountStatus(profile ? `Welcome back, ${profile.name}. Your chat name is restored.` : "Signed in. Choose a chat name and send a message to save it.");
+                    } catch (error) {
+                        setAccountStatus("Signed in, but the saved chat name couldn't load. Publish the updated database rules in the setup guide.", true);
+                    }
+                }
+
                 setStatus("Live", "live");
+
+                accountForm.addEventListener("submit", (event) => {
+                    event.preventDefault();
+                    accountLogin.click();
+                });
+
+                accountCreate.addEventListener("click", async () => {
+                    if (!nameInput.reportValidity() || !accountForm.reportValidity()) return;
+                    updateAccountControls(auth.currentUser, true);
+                    setAccountStatus("Creating your account...");
+                    try {
+                        const credential = EmailAuthProvider.credential(accountEmail.value.trim(), accountPassword.value);
+                        const result = await linkWithCredential(auth.currentUser, credential);
+                        currentUid = result.user.uid;
+                        await claimChatName(result.user);
+                        await updateAdminAccess(result.user);
+                        accountPassword.value = "";
+                        updateAccountControls(result.user);
+                        setAccountStatus("Account created. Sign in with this email and password when you return.");
+                    } catch (error) {
+                        updateAccountControls(auth.currentUser);
+                        setAccountStatus(authErrorMessage(error), true);
+                    }
+                });
+
+                accountLogin.addEventListener("click", async () => {
+                    if (!accountForm.reportValidity()) return;
+                    updateAccountControls(auth.currentUser, true);
+                    setAccountStatus("Signing in...");
+                    try {
+                        const result = await signInWithEmailAndPassword(auth, accountEmail.value.trim(), accountPassword.value);
+                        currentUid = result.user.uid;
+                        await updateAdminAccess(result.user);
+                        const profile = await loadChatProfile(result.user);
+                        if (!profile) {
+                            nameInput.value = "";
+                            localStorage.removeItem("arcade-chat-name");
+                        }
+                        accountPassword.value = "";
+                        updateAccountControls(result.user);
+                        setAccountStatus(profile ? `Welcome back, ${profile.name}. Your chat name is restored.` : "Signed in. Choose a chat name and send a message to save it.");
+                    } catch (error) {
+                        updateAccountControls(auth.currentUser);
+                        setAccountStatus(authErrorMessage(error), true);
+                    }
+                });
+
+                accountSignOut.addEventListener("click", async () => {
+                    updateAccountControls(auth.currentUser, true);
+                    setAccountStatus("Signing out...");
+                    try {
+                        await signOut(auth);
+                        const guest = (await signInAnonymously(auth)).user;
+                        currentUid = guest.uid;
+                        await updateAdminAccess(guest);
+                        nameInput.value = "";
+                        localStorage.removeItem("arcade-chat-name");
+                        updateAccountControls(guest);
+                        setAccountStatus("Signed out. You're chatting as a guest.");
+                    } catch (error) {
+                        updateAccountControls(auth.currentUser);
+                        setAccountStatus(authErrorMessage(error), true);
+                    }
+                });
+
+                adminForm.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    const text = adminMessage.value.trim();
+                    if (!isAdmin || !text) return;
+
+                    adminSend.disabled = true;
+                    setAdminStatus("Sending notice...");
+                    try {
+                        await set(ref(database, "announcement"), {
+                            uid: currentUid,
+                            text,
+                            createdAt: serverTimestamp()
+                        });
+                        adminMessage.value = "";
+                        setAdminStatus("Notice sent to visitors currently on the arcade.");
+                    } catch (error) {
+                        console.error("Announcement send failed", error);
+                        setAdminStatus("Notice could not be sent. Check the admin database rules.", true);
+                    } finally {
+                        adminSend.disabled = false;
+                    }
+                });
 
                 form.addEventListener("submit", async (event) => {
                     event.preventDefault();
@@ -377,8 +841,8 @@
                     try {
                         const nameKey = name.toLowerCase();
                         const claim = await runTransaction(ref(database, `usernames/${nameKey}`), (ownerUid) => {
-                            if (ownerUid === null || ownerUid === credentials.user.uid) {
-                                return credentials.user.uid;
+                            if (ownerUid === null || ownerUid === currentUid) {
+                                return currentUid;
                             }
                             return;
                         });
@@ -388,9 +852,10 @@
                             return;
                         }
 
+                        await set(ref(database, `profiles/${currentUid}`), { name, nameKey });
                         localStorage.setItem("arcade-chat-name", name);
                         await push(ref(database, "messages"), {
-                            uid: credentials.user.uid,
+                            uid: currentUid,
                             name,
                             nameKey,
                             text,
