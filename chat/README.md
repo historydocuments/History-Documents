@@ -7,7 +7,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 3. In **Realtime Database**, create a database and copy its URL (for example, `https://your-project-default-rtdb.firebaseio.com`).
 4. Copy the web app's `apiKey`, `authDomain`, `projectId`, and `appId`, plus the database URL, into [`chat-config.js`](chat-config.js).
 5. In **Authentication > Settings > Authorized domains**, add the Netlify hostname and the GitHub Pages hostname that will serve the site.
-6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, and message write rules must all be live in the same database used by `chat-config.js`:
+6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, site controls, and message write rules must all be live in the same database used by `chat-config.js`:
 
 ```json
 {
@@ -59,6 +59,25 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
         ".validate": false
       }
     },
+    "siteControl": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "theme": {
+        ".validate": "newData.isString() && newData.val().matches(/^(local|emerald|ocean|ember)$/)"
+      },
+      "accent": {
+        ".validate": "newData.isString() && newData.val().matches(/^(theme|mint|blue|coral|gold|aqua)$/)"
+      },
+      "partyMode": {
+        ".validate": "newData.isBoolean()"
+      },
+      "refreshToken": {
+        ".validate": "newData.isString() && newData.val().matches(/^[0-9]+-[a-z0-9]+$/)"
+      },
+      "$other": {
+        ".validate": false
+      }
+    },
     "messages": {
       ".read": "auth != null",
       "$messageId": {
@@ -90,6 +109,8 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 
 7. Create or log into the account that should have admin access. In **Authentication > Users**, copy its UID. In **Realtime Database > Data**, add `admins/<uid>` with the Boolean value `true` (for example, `admins/abc123: true`). Only grant this to trusted accounts. The database rules prevent changes to admin access from the website; manage this allowlist in the Firebase console.
 
+The admin control room can publish a site-wide theme and accent, toggle confetti, send or clear an announcement, and request a refresh. It can be opened while a game is running. Refresh requests reload visitors who already have the updated arcade code open; users with older code, closed tabs, or offline browsers cannot be remotely refreshed. A force refresh may interrupt a game.
+
 The web config is public by design; never put a service-account key in this site. These rules let each Firebase UID reserve a case-insensitive username once, require that reservation for every new message, and limit profile access to its owner. Each message stores its Firebase UID, which you can match to the UID in **Authentication > Users** when moderating.
 
-Chat does not require an account: visitors can choose a name and send messages as guests. Creating an account while signed in as a guest links that guest UID to an email and password, keeping an already-claimed username attached to the account. Later, log in with the same email and password to restore the saved name. An older guest identity can only be linked from the browser where that guest session still exists. Admin announcements are sent to connected visitors and appear above the game iframe. This is a public room, so messages and usernames are visible to every visitor. For a larger public audience, add abuse reporting and server-enforced rate limits before opening the room widely.
+Chat does not require an account: visitors can choose a name and send messages as guests. Creating an account while signed in as a guest links that guest UID to an email and password, keeping an already-claimed username attached to the account. Later, log in with the same email and password to restore the saved name. An older guest identity can only be linked from the browser where that guest session still exists. Admin announcements are sent to connected visitors and appear above the game iframe. Admins can also override visitor themes, accent colors, and confetti effects. This is a public room, so messages and usernames are visible to every visitor. For a larger public audience, add abuse reporting and server-enforced rate limits before opening the room widely.

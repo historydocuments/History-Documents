@@ -28,6 +28,33 @@
             --text: #f4e8df;
         }
 
+        body[data-global-theme="emerald"] {
+            --primary: #00ff88;
+            --bg: #121212;
+            --card-bg: #1e1e1e;
+            --text: #e0e0e0;
+        }
+
+        body[data-global-theme="ocean"] {
+            --primary: #58d3e5;
+            --bg: #102027;
+            --card-bg: #1b3038;
+            --text: #e2f1f4;
+        }
+
+        body[data-global-theme="ember"] {
+            --primary: #ff9a62;
+            --bg: #211815;
+            --card-bg: #30221d;
+            --text: #f4e8df;
+        }
+
+        body[data-global-accent="mint"] { --primary: #00e88b; }
+        body[data-global-accent="blue"] { --primary: #63a6ff; }
+        body[data-global-accent="coral"] { --primary: #ff7e89; }
+        body[data-global-accent="gold"] { --primary: #ffc857; }
+        body[data-global-accent="aqua"] { --primary: #4dd0e1; }
+
         /* Full Screen Loading Overlay */
         #loader {
             position: fixed;
@@ -53,12 +80,16 @@
         }
         #arcade-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 1100px; margin-bottom: 16px; }
         #arcade-header h1 { margin: 0; }
+        .header-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
         .settings-toggle, .viewer-back {
             min-height: 42px; padding: 0 14px; border: 1px solid #444; border-radius: 6px;
             background: var(--card-bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer;
         }
         .settings-toggle { border-color: var(--primary); color: var(--primary); }
         .settings-toggle:hover { background: var(--primary); color: #07150e; }
+        .admin-open { min-height: 42px; padding: 0 12px; border: 1px solid #f2d77f; border-radius: 6px; background: #282417; color: #f2d77f; font: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+        .admin-open[hidden] { display: none; }
+        .admin-open:hover { background: #f2d77f; color: #221d0b; }
         .settings-dialog {
             width: min(440px, calc(100vw - 32px)); max-height: min(82vh, 680px); overflow: auto;
             padding: 0; border: 1px solid #3b4941; border-radius: 12px; background: #151d18;
@@ -88,6 +119,8 @@
         #game-frame { display: block; width: 100%; height: 100%; border: 0; background: #000; }
         .viewer-controls { position: absolute; top: 14px; left: 14px; z-index: 1; display: flex; width: max-content; }
         .viewer-back { position: relative; border: 0; background: var(--primary); color: #07150e; }
+        .viewer-open-direct { display: inline-flex; align-items: center; min-height: 42px; margin-left: 8px; padding: 0 12px; border: 1px solid #ffffff38; border-radius: 6px; background: #101713d9; color: #f2f5f2; font-size: 0.82rem; font-weight: 700; text-decoration: none; }
+        .viewer-open-direct:hover { border-color: var(--primary); }
         .viewer-hint {
             position: absolute; top: 17px; right: 16px; z-index: 1; max-width: min(420px, calc(100vw - 32px));
             margin: 0; padding: 9px 12px; border: 1px solid #ffffff38; border-radius: 6px;
@@ -175,22 +208,45 @@
         #account-sign-out[hidden] { display: none; }
         .account-status { margin: 0; padding: 0 16px 12px; color: var(--chat-muted); font-size: 0.78rem; }
         .account-status.error { color: #ff8b79; }
-        .admin-panel { margin: 16px; padding: 16px; border: 1px solid #866e35; border-radius: 6px; background: #282417; }
-        .admin-panel[hidden] { display: none; }
-        .admin-panel h3 { margin: 0 0 6px; color: #f2d77f; font-size: 0.9rem; }
-        .admin-panel p { margin: 0 0 12px; color: #c9c0a5; font-size: 0.8rem; }
-        .admin-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-        .admin-controls textarea { min-height: 44px; max-height: 140px; resize: vertical; padding: 10px 12px; border: 1px solid #574d32; border-radius: 5px; background: #17150f; color: #f8f1da; font: inherit; }
-        .admin-controls button { padding: 0 14px; border: 1px solid #f2d77f; border-radius: 5px; background: #f2d77f; color: #221d0b; font-weight: 800; cursor: pointer; }
-        .admin-controls button:disabled { cursor: wait; opacity: 0.6; }
-        .admin-status { margin: 9px 0 0 !important; color: #c9c0a5; }
-        .admin-status.error { color: #ff9a8c; }
+        .admin-dialog { width: min(760px, calc(100vw - 28px)); max-height: min(88vh, 820px); overflow: auto; padding: 0; border: 1px solid #625535; border-radius: 10px; background: #171812; color: #f5f0df; box-shadow: 0 24px 90px #000c; }
+        .admin-dialog::backdrop { background: #030503dc; backdrop-filter: blur(6px); }
+        .admin-dialog[hidden] { display: none; }
+        .admin-dialog-inner { padding: 24px; }
+        .admin-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid #49432d; }
+        .admin-eyebrow { margin: 0 0 5px; color: #f2d77f; font-size: 0.68rem; font-weight: 900; }
+        .admin-dialog-header h2 { margin: 0; font-size: 1.45rem; }
+        .admin-dialog-header p:last-child { margin: 7px 0 0; color: #c9c0a5; font-size: 0.82rem; }
+        .admin-close { width: 36px; height: 36px; border: 1px solid #574d32; border-radius: 5px; background: #242116; color: #f8f1da; font-size: 1.2rem; cursor: pointer; }
+        .admin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; }
+        .admin-section { min-width: 0; padding: 20px 0; border-bottom: 1px solid #49432d; }
+        .admin-section:last-child { border-bottom: 0; }
+        .admin-section h3 { margin: 0 0 6px; color: #f2d77f; font-size: 0.9rem; }
+        .admin-section > p { margin: 0 0 12px; color: #c9c0a5; font-size: 0.78rem; line-height: 1.45; }
+        .admin-controls { display: grid; gap: 8px; }
+        .admin-controls textarea { min-height: 76px; max-height: 150px; resize: vertical; padding: 10px 12px; border: 1px solid #574d32; border-radius: 5px; background: #10110c; color: #f8f1da; font: inherit; }
+        .admin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .admin-primary, .admin-secondary { min-height: 40px; padding: 0 12px; border: 1px solid #f2d77f; border-radius: 5px; background: #f2d77f; color: #221d0b; font-weight: 800; cursor: pointer; }
+        .admin-secondary { border-color: #574d32; background: transparent; color: #f8f1da; }
+        .admin-primary:disabled, .admin-secondary:disabled, .admin-setting select:disabled, .party-toggle input:disabled { cursor: not-allowed; opacity: 0.55; }
+        .admin-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .admin-setting { display: grid; gap: 5px; color: #e7ddbd; font-size: 0.76rem; font-weight: 750; }
+        .admin-setting select { min-height: 40px; min-width: 0; padding: 0 10px; border: 1px solid #574d32; border-radius: 5px; background: #10110c; color: #f8f1da; font: inherit; }
+        .admin-settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+        .party-toggle { display: flex; align-items: center; gap: 8px; min-height: 40px; color: #f8f1da; font-size: 0.8rem; font-weight: 700; }
+        .party-toggle input { width: 18px; height: 18px; accent-color: #f2d77f; }
+        .admin-status, .site-control-status { margin: 10px 0 0 !important; color: #c9c0a5; font-size: 0.78rem; }
+        .admin-status.error, .site-control-status.error { color: #ff9a8c; }
         .announcement-banner { position: fixed; top: 14px; left: 50%; z-index: 11000; display: flex; align-items: flex-start; gap: 12px; width: min(720px, calc(100vw - 28px)); box-sizing: border-box; padding: 14px 14px 14px 16px; transform: translateX(-50%); border: 1px solid color-mix(in srgb, var(--primary), white 24%); border-radius: 8px; background: #101713f2; color: #f2f5f2; box-shadow: 0 14px 42px #0009; }
         .announcement-banner[hidden] { display: none; }
         .announcement-copy { min-width: 0; flex: 1; }
         .announcement-label { display: block; margin-bottom: 4px; color: var(--primary); font-size: 0.68rem; font-weight: 900; }
         #announcement-text { margin: 0; overflow-wrap: anywhere; font-size: 0.92rem; line-height: 1.4; }
         .announcement-dismiss { width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid #ffffff38; border-radius: 5px; background: transparent; color: white; font-size: 1.15rem; cursor: pointer; }
+        .party-layer { position: fixed; inset: 0; z-index: 10990; overflow: hidden; pointer-events: none; }
+        .party-layer[hidden] { display: none; }
+        .party-confetti { position: absolute; top: -20px; left: var(--party-x); width: 8px; height: 14px; border-radius: 2px; background: var(--party-color); animation: party-fall var(--party-duration) linear var(--party-delay) infinite; }
+        @keyframes party-fall { to { transform: translate3d(22px, 110vh, 0) rotate(720deg); } }
+        @media (prefers-reduced-motion: reduce) { .party-confetti { animation: none; top: var(--party-y); } }
         .chat-notice { margin: 0; padding: 0 16px 14px; color: var(--chat-muted); font-size: 0.82rem; }
         .chat-notice.error { color: #ff8b79; }
         .chat-setup { margin: 16px; padding: 16px; border: 1px solid #735f2b; border-radius: 6px; background: #2a2619; color: #e1d9c4; line-height: 1.55; }
@@ -222,8 +278,15 @@
 
         @media (max-width: 560px) {
             #arcade-header { align-items: flex-start; }
-            #arcade-header h1 { font-size: 1.25rem; }
+            #arcade-header { gap: 8px; }
+            #arcade-header h1 { font-size: 1.1rem; }
+            .settings-toggle, .admin-open { min-height: 38px; padding: 0 9px; font-size: 0.78rem; }
             .settings-dialog-inner { padding: 20px; }
+            .admin-dialog-inner { padding: 18px; }
+            .admin-grid { grid-template-columns: 1fr; }
+            .admin-settings-grid { grid-template-columns: 1fr; }
+            .viewer-controls { width: calc(100vw - 28px); max-width: calc(100vw - 28px); flex-wrap: wrap; }
+            .viewer-open-direct { margin-left: 0; }
             .account-controls { grid-template-columns: 1fr 1fr; }
             .account-controls input { grid-column: 1 / -1; }
             .chat-composer { grid-template-columns: 1fr auto; }
@@ -241,7 +304,10 @@
 
     <header id="arcade-header">
         <h1>🕹️ Arcade Hub</h1>
-        <button id="settings-toggle" class="settings-toggle" type="button" aria-controls="settings-dialog">&#9881; Settings</button>
+        <div class="header-actions">
+            <button id="admin-open" class="admin-open" type="button" aria-controls="admin-panel" hidden>Admin</button>
+            <button id="settings-toggle" class="settings-toggle" type="button" aria-controls="settings-dialog">&#9881; Settings</button>
+        </div>
     </header>
     <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
         <div class="settings-dialog-inner">
@@ -305,9 +371,11 @@
     </div>
 
     <section id="game-view" class="game-view" aria-label="Game viewer" hidden>
-        <iframe id="game-frame" title="Selected game" allow="fullscreen; autoplay; gamepad"></iframe>
+        <iframe id="game-frame" title="Selected game" allow="fullscreen *; autoplay *; gamepad *" tabindex="0"></iframe>
         <div class="viewer-controls">
             <button id="viewer-back" class="viewer-back" type="button">&larr; Back to games</button>
+            <a id="game-open-direct" class="viewer-open-direct" target="_blank" rel="noopener">Open separately</a>
+            <button id="viewer-admin-open" class="admin-open" type="button" aria-controls="admin-panel" hidden>Admin</button>
         </div>
         <p id="viewer-hint" class="viewer-hint">Back button visibility can be changed in Arcade Settings. Browser Back also exits the game.</p>
     </section>
@@ -319,6 +387,7 @@
         </div>
         <button id="announcement-dismiss" class="announcement-dismiss" type="button" aria-label="Dismiss announcement">&times;</button>
     </aside>
+    <div id="party-layer" class="party-layer" aria-hidden="true" hidden></div>
 
     <section id="community-chat" aria-labelledby="chat-title">
         <div class="chat-heading">
@@ -340,15 +409,6 @@
             <p id="account-status" class="account-status" role="status" aria-live="polite">Create an account to keep your chat name when you return.</p>
             <p id="admin-access-status" class="account-status" role="status" aria-live="polite" hidden></p>
         </div>
-        <section id="admin-panel" class="admin-panel" aria-labelledby="admin-title" hidden>
-            <h3 id="admin-title">Admin broadcast</h3>
-            <p>Send a notice to everyone currently on the arcade, including players in a game.</p>
-            <form id="admin-form" class="admin-controls">
-                <textarea id="admin-message" maxlength="240" placeholder="Write an arcade-wide notice" aria-label="Announcement message" required></textarea>
-                <button id="admin-send" type="submit">Send notice</button>
-            </form>
-            <p id="admin-status" class="admin-status" role="status" aria-live="polite"></p>
-        </section>
         <ol id="chat-messages" class="chat-messages" aria-live="polite" aria-relevant="additions">
             <li id="chat-empty" class="chat-empty">The room is quiet. Start the conversation.</li>
         </ol>
@@ -362,6 +422,69 @@
             Chat needs a Firebase project. Follow <a href="../chat/README.md">the setup guide</a>, then reload this page.
         </aside>
     </section>
+
+    <dialog id="admin-panel" class="admin-dialog" aria-labelledby="admin-title" hidden>
+        <div class="admin-dialog-inner">
+            <header class="admin-dialog-header">
+                <div>
+                    <p class="admin-eyebrow">SITE CONTROL</p>
+                    <h2 id="admin-title">Admin control room</h2>
+                    <p>Changes sync to visitors with this site version open.</p>
+                </div>
+                <button id="admin-close" class="admin-close" type="button" aria-label="Close admin panel">&times;</button>
+            </header>
+            <div class="admin-grid">
+                <section class="admin-section" aria-labelledby="broadcast-title">
+                    <h3 id="broadcast-title">Broadcast</h3>
+                    <p>Put a short notice above every visitor's page, including games.</p>
+                    <form id="admin-form" class="admin-controls">
+                        <textarea id="admin-message" maxlength="240" placeholder="Write an arcade-wide notice" aria-label="Announcement message" required></textarea>
+                        <div class="admin-actions">
+                            <button id="admin-send" class="admin-primary" type="submit">Send notice</button>
+                            <button id="announcement-clear" class="admin-secondary" type="button">Clear notice</button>
+                        </div>
+                    </form>
+                    <p id="admin-status" class="admin-status" role="status" aria-live="polite"></p>
+                </section>
+                <section class="admin-section" aria-labelledby="appearance-title">
+                    <h3 id="appearance-title">Appearance and effects</h3>
+                    <p>Set the shared color mood and turn on a little celebration.</p>
+                    <div class="admin-settings-grid">
+                        <label class="admin-setting" for="site-theme-select">
+                            Site theme
+                            <select id="site-theme-select" disabled>
+                                <option value="local">Visitor preference</option>
+                                <option value="emerald">Emerald</option>
+                                <option value="ocean">Ocean</option>
+                                <option value="ember">Ember</option>
+                            </select>
+                        </label>
+                        <label class="admin-setting" for="site-accent-select">
+                            Accent color
+                            <select id="site-accent-select" disabled>
+                                <option value="theme">Theme default</option>
+                                <option value="mint">Mint</option>
+                                <option value="blue">Blue</option>
+                                <option value="coral">Coral</option>
+                                <option value="gold">Gold</option>
+                                <option value="aqua">Aqua</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="admin-settings-actions">
+                        <button id="site-theme-apply" class="admin-primary" type="button" disabled>Apply appearance</button>
+                        <label class="party-toggle"><input id="party-mode-toggle" type="checkbox" disabled> Confetti</label>
+                    </div>
+                    <p id="site-control-status" class="site-control-status" role="status" aria-live="polite">Preferences and effects sync live; older or closed tabs are not affected.</p>
+                </section>
+                <section class="admin-section" aria-labelledby="operations-title">
+                    <h3 id="operations-title">Operations</h3>
+                    <p>Request connected visitors to reload the latest published version. Active games may be interrupted.</p>
+                    <button id="force-refresh-button" class="admin-secondary" type="button" disabled>Refresh all visitors</button>
+                </section>
+            </div>
+        </div>
+    </dialog>
 
     <script src="games-list.js"></script>
     <script>
@@ -379,6 +502,7 @@
         const backButtonRadios = document.querySelectorAll('input[name="back-button-mode"]');
         const gameView = document.getElementById('game-view');
         const gameFrame = document.getElementById('game-frame');
+        const gameOpenDirect = document.getElementById('game-open-direct');
         const viewerHint = document.getElementById('viewer-hint');
 
         function readPreference(key, fallback) {
@@ -490,6 +614,7 @@
 
         function showGame(game) {
             gameFrame.src = `${game.folder}/index.html`;
+            gameOpenDirect.href = new URL(`${game.folder}/index.html`, window.location.href).href;
             gameFrame.title = game.title;
             gameView.hidden = false;
             viewerHint.classList.remove('is-visible');
@@ -533,7 +658,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { EmailAuthProvider, getAuth, linkWithCredential, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, runTransaction, serverTimestamp, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+        import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
         const form = document.getElementById("chat-composer");
         const nameInput = form.elements.name;
@@ -551,13 +676,24 @@
         const accountSignOut = document.getElementById("account-sign-out");
         const accountStatus = document.getElementById("account-status");
         const adminAccessStatus = document.getElementById("admin-access-status");
+        const adminOpen = document.getElementById("admin-open");
+        const viewerAdminOpen = document.getElementById("viewer-admin-open");
         const adminPanel = document.getElementById("admin-panel");
+        const adminClose = document.getElementById("admin-close");
         const adminForm = document.getElementById("admin-form");
         const adminMessage = document.getElementById("admin-message");
         const adminSend = document.getElementById("admin-send");
+        const announcementClear = document.getElementById("announcement-clear");
         const adminStatus = document.getElementById("admin-status");
+        const siteThemeSelect = document.getElementById("site-theme-select");
+        const siteAccentSelect = document.getElementById("site-accent-select");
+        const siteThemeApply = document.getElementById("site-theme-apply");
+        const partyModeToggle = document.getElementById("party-mode-toggle");
+        const forceRefreshButton = document.getElementById("force-refresh-button");
+        const siteControlStatus = document.getElementById("site-control-status");
         const announcementBanner = document.getElementById("announcement-banner");
         const announcementText = document.getElementById("announcement-text");
+        const partyLayer = document.getElementById("party-layer");
         const config = window.CHAT_FIREBASE_CONFIG;
         const isConfigured = config && ["apiKey", "authDomain", "databaseURL", "projectId", "appId"]
             .every((key) => typeof config[key] === "string" && config[key].trim() !== "");
@@ -566,6 +702,20 @@
         let currentUid;
         let isAdmin = false;
         let announcementTimer;
+        let hasReadSiteControls = false;
+        let lastRefreshToken = null;
+
+        const partyColors = ["#ff526e", "#ffd84d", "#56d6c9", "#69a7ff", "#c58cff"];
+        for (let index = 0; index < 32; index += 1) {
+            const piece = document.createElement("span");
+            piece.className = "party-confetti";
+            piece.style.setProperty("--party-x", `${(index * 37) % 100}%`);
+            piece.style.setProperty("--party-y", `${(index * 29) % 85}%`);
+            piece.style.setProperty("--party-color", partyColors[index % partyColors.length]);
+            piece.style.setProperty("--party-delay", `${(index % 9) * -0.8}s`);
+            piece.style.setProperty("--party-duration", `${5 + (index % 5)}s`);
+            partyLayer.append(piece);
+        }
 
         nameInput.value = localStorage.getItem("arcade-chat-name") || "";
 
@@ -615,9 +765,58 @@
             adminStatus.classList.toggle("error", isError);
         }
 
+        function setSiteControlStatus(message, isError = false) {
+            siteControlStatus.textContent = message;
+            siteControlStatus.classList.toggle("error", isError);
+        }
+
+        function setAdminControlsEnabled(enabled) {
+            adminOpen.hidden = !enabled;
+            viewerAdminOpen.hidden = !enabled;
+            if (!enabled && adminPanel.open) adminPanel.close();
+            siteThemeSelect.disabled = !enabled;
+            siteAccentSelect.disabled = !enabled;
+            siteThemeApply.disabled = !enabled;
+            partyModeToggle.disabled = !enabled;
+            forceRefreshButton.disabled = !enabled;
+        }
+
+        function applySiteControls(settings) {
+            const theme = ["local", "emerald", "ocean", "ember"].includes(settings.theme) ? settings.theme : "local";
+            const accent = ["theme", "mint", "blue", "coral", "gold", "aqua"].includes(settings.accent) ? settings.accent : "theme";
+            if (theme === "local") delete document.body.dataset.globalTheme;
+            else document.body.dataset.globalTheme = theme;
+            if (accent === "theme") delete document.body.dataset.globalAccent;
+            else document.body.dataset.globalAccent = accent;
+            siteThemeSelect.value = theme;
+            siteAccentSelect.value = accent;
+            partyModeToggle.checked = settings.partyMode === true;
+            partyLayer.hidden = !partyModeToggle.checked;
+
+            const refreshToken = typeof settings.refreshToken === "string" ? settings.refreshToken : null;
+            if (hasReadSiteControls && refreshToken !== lastRefreshToken) {
+                setSiteControlStatus("A site refresh was requested. Reloading...");
+                setTimeout(() => window.location.reload(), 900);
+            }
+            lastRefreshToken = refreshToken;
+            hasReadSiteControls = true;
+        }
+
+        function openAdminPanel() {
+            if (isAdmin && !adminPanel.open) adminPanel.showModal();
+        }
+
+        adminOpen.addEventListener("click", openAdminPanel);
+        viewerAdminOpen.addEventListener("click", openAdminPanel);
+        adminClose.addEventListener("click", () => adminPanel.close());
+        adminPanel.addEventListener("click", (event) => {
+            if (event.target === adminPanel) adminPanel.close();
+        });
+
         async function updateAdminAccess(user) {
             isAdmin = false;
             adminPanel.hidden = true;
+            setAdminControlsEnabled(false);
             if (!user || user.isAnonymous) {
                 setAdminAccessStatus("");
                 return;
@@ -627,6 +826,7 @@
                 const snapshot = await get(ref(database, `admins/${user.uid}`));
                 isAdmin = snapshot.val() === true;
                 adminPanel.hidden = !isAdmin;
+                setAdminControlsEnabled(isAdmin);
                 setAdminAccessStatus(isAdmin ? "" : `Signed in. Admin panel hidden for UID ${user.uid}. In Realtime Database, set admins/${user.uid} to Boolean true; see the setup guide.`);
                 if (isAdmin) setAdminStatus("Admin access verified.");
             } catch (error) {
@@ -730,6 +930,10 @@
                 });
                 onValue(ref(database, "announcement"), (snapshot) => showAnnouncement(snapshot.val()), (error) => {
                     console.warn("Announcement listener failed", error);
+                });
+                onValue(ref(database, "siteControl"), (snapshot) => applySiteControls(snapshot.val() || {}), (error) => {
+                    console.warn("Site controls listener failed", error);
+                    if (isAdmin) setSiteControlStatus("Site controls could not load. Check the siteControl read rule in the setup guide.", true);
                 });
                 document.getElementById("announcement-dismiss").addEventListener("click", () => {
                     clearTimeout(announcementTimer);
@@ -842,6 +1046,64 @@
                         setAdminStatus("Notice could not be sent. Check the admin database rules.", true);
                     } finally {
                         adminSend.disabled = false;
+                    }
+                });
+
+                announcementClear.addEventListener("click", async () => {
+                    if (!isAdmin) return;
+                    announcementClear.disabled = true;
+                    try {
+                        await remove(ref(database, "announcement"));
+                        setAdminStatus("Live notice cleared for everyone.");
+                    } catch (error) {
+                        setAdminStatus("Notice could not be cleared. Check the announcement database rules.", true);
+                    } finally {
+                        announcementClear.disabled = false;
+                    }
+                });
+
+                siteThemeApply.addEventListener("click", async () => {
+                    if (!isAdmin) return;
+                    siteThemeApply.disabled = true;
+                    setSiteControlStatus("Publishing shared appearance...");
+                    try {
+                        await update(ref(database, "siteControl"), {
+                            theme: siteThemeSelect.value,
+                            accent: siteAccentSelect.value
+                        });
+                        setSiteControlStatus("Shared appearance updated for connected visitors.");
+                    } catch (error) {
+                        setSiteControlStatus("Appearance update denied. Check the siteControl write rules in the setup guide.", true);
+                    } finally {
+                        siteThemeApply.disabled = false;
+                    }
+                });
+
+                partyModeToggle.addEventListener("change", async () => {
+                    if (!isAdmin) return;
+                    partyModeToggle.disabled = true;
+                    try {
+                        await set(ref(database, "siteControl/partyMode"), partyModeToggle.checked);
+                        setSiteControlStatus(partyModeToggle.checked ? "Party mode enabled for connected visitors." : "Party mode turned off.");
+                    } catch (error) {
+                        setSiteControlStatus("Party mode update denied. Check the siteControl write rules in the setup guide.", true);
+                    } finally {
+                        partyModeToggle.disabled = false;
+                    }
+                });
+
+                forceRefreshButton.addEventListener("click", async () => {
+                    if (!isAdmin || !window.confirm("Reload everyone currently on the site? This may interrupt active games.")) return;
+                    forceRefreshButton.disabled = true;
+                    setSiteControlStatus("Sending refresh request to connected visitors...");
+                    try {
+                        const token = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+                        await set(ref(database, "siteControl/refreshToken"), token);
+                        setSiteControlStatus("Refresh requested. Visitors with this site version open will reload.");
+                    } catch (error) {
+                        setSiteControlStatus("Refresh request denied. Check the siteControl write rules in the setup guide.", true);
+                    } finally {
+                        forceRefreshButton.disabled = false;
                     }
                 });
 
