@@ -14,6 +14,13 @@
             --warning: #ffa502;
         }
 
+        body[data-theme="custom"] {
+            --primary: var(--custom-primary);
+            --bg: var(--custom-background);
+            --card-bg: var(--custom-card);
+            --text: var(--custom-text);
+        }
+
         body[data-theme="ocean"] {
             --primary: #58d3e5;
             --bg: #102027;
@@ -104,12 +111,16 @@
         .settings-group { min-width: 0; margin: 0; padding: 0; border: 0; }
         .settings-group + .settings-group { margin-top: 25px; }
         .settings-group legend { margin-bottom: 11px; color: #dce8df; font-size: 0.86rem; font-weight: 750; }
-        .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .theme-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); gap: 8px; }
         .theme-option { display: grid; justify-items: start; gap: 10px; padding: 12px; border: 1px solid #354139; border-radius: 7px; background: #101713; color: #e4ece6; font-size: 0.8rem; cursor: pointer; }
         .theme-option input, .back-mode-option input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
         .theme-option:has(input:checked), .back-mode-option:has(input:checked) { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
         .theme-option:focus-within, .back-mode-option:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
         .theme-swatch { width: 24px; height: 24px; border-radius: 50%; background: var(--theme-swatch); box-shadow: 0 0 0 3px #ffffff12; }
+        .theme-color-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+        .theme-color-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; color: #dce8df; font-size: 0.78rem; }
+        .theme-color-control input { width: 42px; height: 34px; padding: 2px; border: 1px solid #354139; border-radius: 5px; background: #101713; cursor: pointer; }
+        .theme-reset { min-height: 36px; margin-top: 10px; padding: 0 10px; border: 1px solid #354139; border-radius: 5px; background: transparent; color: #dce8df; font: inherit; font-size: 0.76rem; cursor: pointer; }
         .back-mode-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border: 1px solid #354139; border-radius: 8px; background: #0e1410; }
         .back-mode-option { position: relative; display: grid; min-height: 40px; place-items: center; border: 1px solid transparent; border-radius: 5px; color: #c0cec4; font-size: 0.78rem; cursor: pointer; }
         .back-mode-option:has(input:checked) { background: #24342a; color: #f3fff6; }
@@ -117,9 +128,15 @@
         .game-view { position: fixed; inset: 0; z-index: 10000; background: #000; }
         .game-view[hidden] { display: none; }
         #game-frame { display: block; width: 100%; height: 100%; border: 0; background: #000; }
-        .viewer-controls { position: absolute; top: 14px; left: 14px; z-index: 1; display: flex; width: max-content; }
+        .frame-loading { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; background: #080b0a; color: #eef5f0; text-align: center; pointer-events: none; }
+        .frame-loading[hidden], .frame-load-fallback[hidden] { display: none; }
+        .frame-loading p { margin: 12px 0 0; font-size: 0.9rem; }
+        .frame-loading-spinner { width: 36px; height: 36px; margin: 0 auto; border: 3px solid #ffffff2e; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .frame-load-fallback { position: absolute; right: 14px; bottom: 14px; z-index: 2; max-width: min(420px, calc(100vw - 28px)); margin: 0; padding: 10px 12px; border: 1px solid #ffffff38; border-radius: 6px; background: #101713ed; color: #f2f5f2; font-size: 0.82rem; }
+        .viewer-controls { position: absolute; top: 14px; left: 14px; z-index: 1; display: flex; width: max-content; align-items: center; gap: 8px; }
         .viewer-back { position: relative; border: 0; background: var(--primary); color: #07150e; }
-        .viewer-open-direct { display: inline-flex; align-items: center; min-height: 42px; margin-left: 8px; padding: 0 12px; border: 1px solid #ffffff38; border-radius: 6px; background: #101713d9; color: #f2f5f2; font-size: 0.82rem; font-weight: 700; text-decoration: none; }
+        .viewer-toolbar-action { transition: opacity 0.18s ease, visibility 0.18s ease; }
+        .viewer-open-direct { display: inline-flex; align-items: center; min-height: 42px; padding: 0 12px; border: 1px solid #ffffff38; border-radius: 6px; background: #101713d9; color: #f2f5f2; font-size: 0.82rem; font-weight: 700; text-decoration: none; }
         .viewer-open-direct:hover { border-color: var(--primary); }
         .viewer-hint {
             position: absolute; top: 17px; right: 16px; z-index: 1; max-width: min(420px, calc(100vw - 32px));
@@ -131,8 +148,8 @@
             0%, 80% { opacity: 1; visibility: visible; }
             100% { opacity: 0; visibility: hidden; }
         }
-        body[data-back-button="hover"] .viewer-controls:not(:hover):not(:focus-within) .viewer-back { opacity: 0; }
-        body[data-back-button="off"] .viewer-back { display: none; }
+        body[data-toolbar="hover"] .viewer-controls:not(:hover):not(:focus-within) .viewer-toolbar-action:not([hidden]) { opacity: 0; pointer-events: none; }
+        body[data-toolbar="off"] .viewer-toolbar-action { display: none; }
         button:focus-visible, .settings-dialog input:focus-visible, select:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
         /* Hide content until script decides what to show */
         #host-section, #main-content { display: none; }
@@ -217,9 +234,12 @@
         .admin-dialog-header h2 { margin: 0; font-size: 1.45rem; }
         .admin-dialog-header p:last-child { margin: 7px 0 0; color: #c9c0a5; font-size: 0.82rem; }
         .admin-close { width: 36px; height: 36px; border: 1px solid #574d32; border-radius: 5px; background: #242116; color: #f8f1da; font-size: 1.2rem; cursor: pointer; }
-        .admin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 24px; }
-        .admin-section { min-width: 0; padding: 20px 0; border-bottom: 1px solid #49432d; }
-        .admin-section:last-child { border-bottom: 0; }
+        .admin-tabs { display: flex; gap: 5px; margin-top: 18px; padding-bottom: 8px; overflow-x: auto; border-bottom: 1px solid #49432d; }
+        .admin-tab { min-height: 38px; flex: 0 0 auto; padding: 0 12px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #c9c0a5; font: inherit; font-size: 0.8rem; font-weight: 750; cursor: pointer; }
+        .admin-tab[aria-selected="true"] { border-color: #625535; background: #282417; color: #f2d77f; }
+        .admin-grid { display: block; }
+        .admin-section { min-width: 0; padding: 20px 0 4px; }
+        .admin-section[hidden] { display: none; }
         .admin-section h3 { margin: 0 0 6px; color: #f2d77f; font-size: 0.9rem; }
         .admin-section > p { margin: 0 0 12px; color: #c9c0a5; font-size: 0.78rem; line-height: 1.45; }
         .admin-controls { display: grid; gap: 8px; }
@@ -245,6 +265,7 @@
         .party-layer { position: fixed; inset: 0; z-index: 10990; overflow: hidden; pointer-events: none; }
         .party-layer[hidden] { display: none; }
         .party-confetti { position: absolute; top: -20px; left: var(--party-x); width: 8px; height: 14px; border-radius: 2px; background: var(--party-color); animation: party-fall var(--party-duration) linear var(--party-delay) infinite; }
+        .party-layer.party-burst .party-confetti { animation-duration: 2.5s; animation-delay: 0s; animation-iteration-count: 1; }
         @keyframes party-fall { to { transform: translate3d(22px, 110vh, 0) rotate(720deg); } }
         @media (prefers-reduced-motion: reduce) { .party-confetti { animation: none; top: var(--party-y); } }
         .chat-notice { margin: 0; padding: 0 16px 14px; color: var(--chat-muted); font-size: 0.82rem; }
@@ -283,7 +304,6 @@
             .settings-toggle, .admin-open { min-height: 38px; padding: 0 9px; font-size: 0.78rem; }
             .settings-dialog-inner { padding: 20px; }
             .admin-dialog-inner { padding: 18px; }
-            .admin-grid { grid-template-columns: 1fr; }
             .admin-settings-grid { grid-template-columns: 1fr; }
             .viewer-controls { width: calc(100vw - 28px); max-width: calc(100vw - 28px); flex-wrap: wrap; }
             .viewer-open-direct { margin-left: 0; }
@@ -333,14 +353,33 @@
                         <input type="radio" name="theme" value="ember">
                         <span class="theme-swatch" aria-hidden="true"></span><span>Ember</span>
                     </label>
+                    <label class="theme-option" id="custom-theme-option" style="--theme-swatch: #00ff88">
+                        <input type="radio" name="theme" value="custom">
+                        <span class="theme-swatch" aria-hidden="true"></span><span>Custom</span>
+                    </label>
                 </div>
+                <div class="theme-color-controls" aria-label="Custom theme colors">
+                    <label class="theme-color-control" for="custom-primary">Accent
+                        <input id="custom-primary" type="color" value="#00ff88">
+                    </label>
+                    <label class="theme-color-control" for="custom-background">Background
+                        <input id="custom-background" type="color" value="#121212">
+                    </label>
+                    <label class="theme-color-control" for="custom-card">Cards
+                        <input id="custom-card" type="color" value="#1e1e1e">
+                    </label>
+                    <label class="theme-color-control" for="custom-text">Text
+                        <input id="custom-text" type="color" value="#e0e0e0">
+                    </label>
+                </div>
+                <button id="custom-theme-reset" class="theme-reset" type="button">Reset custom colors</button>
             </fieldset>
             <fieldset class="settings-group">
-                <legend>Back button</legend>
+                <legend>Toolbar settings</legend>
                 <div class="back-mode-options">
-                    <label class="back-mode-option"><input type="radio" name="back-button-mode" value="on"><span>On</span></label>
-                    <label class="back-mode-option"><input type="radio" name="back-button-mode" value="hover"><span>On hover</span></label>
-                    <label class="back-mode-option"><input type="radio" name="back-button-mode" value="off"><span>Off</span></label>
+                    <label class="back-mode-option"><input type="radio" name="toolbar-mode" value="on"><span>On</span></label>
+                    <label class="back-mode-option"><input type="radio" name="toolbar-mode" value="hover"><span>On hover</span></label>
+                    <label class="back-mode-option"><input type="radio" name="toolbar-mode" value="off"><span>Off</span></label>
                 </div>
             </fieldset>
             <p class="settings-panel-note">Preferences are saved on this device.</p>
@@ -372,12 +411,16 @@
 
     <section id="game-view" class="game-view" aria-label="Game viewer" hidden>
         <iframe id="game-frame" title="Selected game" allow="fullscreen *; autoplay *; gamepad *" tabindex="0"></iframe>
-        <div class="viewer-controls">
-            <button id="viewer-back" class="viewer-back" type="button">&larr; Back to games</button>
-            <a id="game-open-direct" class="viewer-open-direct" target="_blank" rel="noopener">Open separately</a>
-            <button id="viewer-admin-open" class="admin-open" type="button" aria-controls="admin-panel" hidden>Admin</button>
+        <div id="frame-loading" class="frame-loading" role="status" aria-live="polite" hidden>
+            <div><div class="frame-loading-spinner" aria-hidden="true"></div><p>Opening game...</p></div>
         </div>
-        <p id="viewer-hint" class="viewer-hint">Back button visibility can be changed in Arcade Settings. Browser Back also exits the game.</p>
+        <p id="frame-load-fallback" class="frame-load-fallback" role="status" hidden>The game is taking a while to start. If the screen stays blank, use <strong>Open separately</strong> to launch it outside the overlay.</p>
+        <div class="viewer-controls">
+            <button id="viewer-back" class="viewer-back viewer-toolbar-action" type="button">&larr; Back to games</button>
+            <a id="game-open-direct" class="viewer-open-direct viewer-toolbar-action" target="_blank" rel="noopener">Open separately</a>
+            <button id="viewer-admin-open" class="admin-open viewer-toolbar-action" type="button" aria-controls="admin-panel" hidden>Admin</button>
+        </div>
+        <p id="viewer-hint" class="viewer-hint">Toolbar visibility can be changed in Arcade Settings. Browser Back also exits the game.</p>
     </section>
 
     <aside id="announcement-banner" class="announcement-banner" role="status" aria-live="polite" hidden>
@@ -433,8 +476,14 @@
                 </div>
                 <button id="admin-close" class="admin-close" type="button" aria-label="Close admin panel">&times;</button>
             </header>
+            <nav class="admin-tabs" role="tablist" aria-label="Admin sections">
+                <button id="admin-tab-broadcast" class="admin-tab" type="button" role="tab" aria-selected="true" aria-controls="admin-view-broadcast">Broadcast</button>
+                <button id="admin-tab-appearance" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="admin-view-appearance" tabindex="-1">Appearance</button>
+                <button id="admin-tab-operations" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="admin-view-operations" tabindex="-1">Operations</button>
+                <button id="admin-tab-fun" class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="admin-view-fun" tabindex="-1">Fun</button>
+            </nav>
             <div class="admin-grid">
-                <section class="admin-section" aria-labelledby="broadcast-title">
+                <section id="admin-view-broadcast" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-broadcast" tabindex="0">
                     <h3 id="broadcast-title">Broadcast</h3>
                     <p>Put a short notice above every visitor's page, including games.</p>
                     <form id="admin-form" class="admin-controls">
@@ -446,7 +495,7 @@
                     </form>
                     <p id="admin-status" class="admin-status" role="status" aria-live="polite"></p>
                 </section>
-                <section class="admin-section" aria-labelledby="appearance-title">
+                <section id="admin-view-appearance" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-appearance" tabindex="0" hidden>
                     <h3 id="appearance-title">Appearance and effects</h3>
                     <p>Set the shared color mood and turn on a little celebration.</p>
                     <div class="admin-settings-grid">
@@ -477,10 +526,19 @@
                     </div>
                     <p id="site-control-status" class="site-control-status" role="status" aria-live="polite">Preferences and effects sync live; older or closed tabs are not affected.</p>
                 </section>
-                <section class="admin-section" aria-labelledby="operations-title">
+                <section id="admin-view-operations" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-operations" tabindex="0" hidden>
                     <h3 id="operations-title">Operations</h3>
                     <p>Request connected visitors to reload the latest published version. Active games may be interrupted.</p>
                     <button id="force-refresh-button" class="admin-secondary" type="button" disabled>Refresh all visitors</button>
+                </section>
+                <section id="admin-view-fun" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-fun" tabindex="0" hidden>
+                    <h3 id="fun-title">Arcade fun</h3>
+                    <p>Kick off a surprise game or celebrate with a quick burst of confetti. These actions only affect your current tab.</p>
+                    <div class="admin-actions">
+                        <button id="admin-random-game" class="admin-primary" type="button" disabled>Surprise me with a game</button>
+                        <button id="admin-confetti-burst" class="admin-secondary" type="button" disabled>Confetti burst</button>
+                    </div>
+                    <p id="fun-status" class="site-control-status" role="status" aria-live="polite"></p>
                 </section>
             </div>
         </div>
@@ -499,11 +557,34 @@
         const settingsToggle = document.getElementById('settings-toggle');
         const settingsDialog = document.getElementById('settings-dialog');
         const themeRadios = document.querySelectorAll('input[name="theme"]');
-        const backButtonRadios = document.querySelectorAll('input[name="back-button-mode"]');
+        const toolbarModeRadios = document.querySelectorAll('input[name="toolbar-mode"]');
+        const customThemeColorInputs = {
+            primary: document.getElementById('custom-primary'),
+            background: document.getElementById('custom-background'),
+            card: document.getElementById('custom-card'),
+            text: document.getElementById('custom-text')
+        };
+        const customThemeDefaults = {
+            primary: '#00ff88',
+            background: '#121212',
+            card: '#1e1e1e',
+            text: '#e0e0e0'
+        };
+        const customThemeProperties = {
+            primary: '--custom-primary',
+            background: '--custom-background',
+            card: '--custom-card',
+            text: '--custom-text'
+        };
         const gameView = document.getElementById('game-view');
         const gameFrame = document.getElementById('game-frame');
         const gameOpenDirect = document.getElementById('game-open-direct');
+        const frameLoading = document.getElementById('frame-loading');
+        const frameLoadFallback = document.getElementById('frame-load-fallback');
         const viewerHint = document.getElementById('viewer-hint');
+        let frameLoadTimer;
+        let frameReadyTimer;
+        let activeGameLoad = 0;
 
         function readPreference(key, fallback) {
             try {
@@ -519,16 +600,57 @@
             } catch {}
         }
 
+        function loadCustomThemeColors() {
+            let savedColors;
+            try {
+                savedColors = JSON.parse(readPreference('arcade-custom-theme', '{}'));
+            } catch {
+                savedColors = {};
+            }
+
+            return Object.fromEntries(Object.entries(customThemeDefaults).map(([key, fallback]) => {
+                const value = savedColors && savedColors[key];
+                return [key, typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback];
+            }));
+        }
+
+        function saveCustomThemeColors() {
+            const colors = Object.fromEntries(Object.entries(customThemeColorInputs).map(([key, input]) => [key, input.value]));
+            savePreference('arcade-custom-theme', JSON.stringify(colors));
+        }
+
+        function applyCustomTheme() {
+            Object.entries(customThemeColorInputs).forEach(([key, input]) => {
+                document.body.style.setProperty(customThemeProperties[key], input.value);
+            });
+            document.getElementById('custom-theme-option').style.setProperty('--theme-swatch', customThemeColorInputs.primary.value);
+        }
+
+        function clearCustomTheme() {
+            Object.values(customThemeProperties).forEach((property) => document.body.style.removeProperty(property));
+        }
+
+        function setTheme(theme) {
+            document.body.dataset.theme = theme;
+            if (theme === 'custom') applyCustomTheme();
+            else clearCustomTheme();
+            savePreference('arcade-theme', theme);
+        }
+
         function applyPreferences() {
             const savedTheme = readPreference('arcade-theme', 'emerald');
-            const savedBackButtonMode = readPreference('arcade-back-button', 'on');
-            const theme = ['emerald', 'ocean', 'ember'].includes(savedTheme) ? savedTheme : 'emerald';
-            const backButton = ['on', 'hover', 'off'].includes(savedBackButtonMode) ? savedBackButtonMode : 'on';
+            const savedToolbarMode = readPreference('arcade-toolbar', readPreference('arcade-back-button', 'on'));
+            const theme = ['emerald', 'ocean', 'ember', 'custom'].includes(savedTheme) ? savedTheme : 'emerald';
+            const toolbarMode = ['on', 'hover', 'off'].includes(savedToolbarMode) ? savedToolbarMode : 'on';
+            const customColors = loadCustomThemeColors();
 
+            Object.entries(customThemeColorInputs).forEach(([key, input]) => { input.value = customColors[key]; });
             document.body.dataset.theme = theme;
-            document.body.dataset.backButton = backButton;
+            document.body.dataset.toolbar = toolbarMode;
             document.querySelector(`input[name="theme"][value="${theme}"]`).checked = true;
-            document.querySelector(`input[name="back-button-mode"][value="${backButton}"]`).checked = true;
+            document.querySelector(`input[name="toolbar-mode"][value="${toolbarMode}"]`).checked = true;
+            if (theme === 'custom') applyCustomTheme();
+            else clearCustomTheme();
         }
 
         settingsToggle.addEventListener('click', () => settingsDialog.showModal());
@@ -538,13 +660,25 @@
         });
 
         themeRadios.forEach((radio) => radio.addEventListener('change', () => {
-            document.body.dataset.theme = radio.value;
-            savePreference('arcade-theme', radio.value);
+            setTheme(radio.value);
         }));
 
-        backButtonRadios.forEach((radio) => radio.addEventListener('change', () => {
-            document.body.dataset.backButton = radio.value;
-            savePreference('arcade-back-button', radio.value);
+        Object.values(customThemeColorInputs).forEach((input) => input.addEventListener('input', () => {
+            document.querySelector('input[name="theme"][value="custom"]').checked = true;
+            setTheme('custom');
+            saveCustomThemeColors();
+        }));
+
+        document.getElementById('custom-theme-reset').addEventListener('click', () => {
+            Object.entries(customThemeColorInputs).forEach(([key, input]) => { input.value = customThemeDefaults[key]; });
+            document.querySelector('input[name="theme"][value="custom"]').checked = true;
+            setTheme('custom');
+            saveCustomThemeColors();
+        });
+
+        toolbarModeRadios.forEach((radio) => radio.addEventListener('change', () => {
+            document.body.dataset.toolbar = radio.value;
+            savePreference('arcade-toolbar', radio.value);
         }));
 
         async function checkSiteStatus() {
@@ -576,6 +710,7 @@
                     if (!Array.isArray(window.GAMES)) throw new Error('Game list was not generated');
                     allGames = window.GAMES;
                     renderGames(allGames);
+                    restoreGameFromHistory();
                     document.getElementById('main-content').style.display = 'flex';
                 } catch (err) {
                     // Fallback to host section if JSON fails
@@ -608,28 +743,88 @@
 
         function openGame(folder, title) {
             const game = { folder, title };
-            history.pushState({ arcadeGame: game }, '', `#game/${encodeURIComponent(folder)}`);
+            const method = !gameView.hidden && history.state && history.state.arcadeGame ? 'replaceState' : 'pushState';
+            history[method]({ arcadeGame: game }, '', `#game/${encodeURIComponent(folder)}`);
             showGame(game);
         }
 
+        function restoreGameFromHistory() {
+            const stateGame = history.state && history.state.arcadeGame;
+            if (stateGame && allGames.includes(stateGame.folder)) {
+                const baseUrl = `${window.location.pathname}${window.location.search}`;
+                history.replaceState(null, '', baseUrl);
+                history.pushState({ arcadeGame: stateGame }, '', `#game/${encodeURIComponent(stateGame.folder)}`);
+                showGame(stateGame);
+                return;
+            }
+
+            const match = window.location.hash.match(/^#game\/(.+)$/);
+            if (!match) return;
+
+            try {
+                const folder = decodeURIComponent(match[1]);
+                if (!allGames.includes(folder)) throw new Error('Unknown game route');
+                const title = folder.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                const game = { folder, title };
+                const baseUrl = `${window.location.pathname}${window.location.search}`;
+                history.replaceState(null, '', baseUrl);
+                history.pushState({ arcadeGame: game }, '', `#game/${encodeURIComponent(folder)}`);
+                showGame(game);
+            } catch (error) {
+                history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+            }
+        }
+
         function showGame(game) {
-            gameFrame.src = `${game.folder}/index.html`;
+            const loadId = ++activeGameLoad;
+            clearTimeout(frameLoadTimer);
+            clearTimeout(frameReadyTimer);
+            frameLoading.hidden = false;
+            frameLoadFallback.hidden = true;
+            gameFrame.onload = () => {
+                if (loadId !== activeGameLoad) return;
+                clearTimeout(frameReadyTimer);
+                frameReadyTimer = setTimeout(() => {
+                    if (loadId === activeGameLoad) frameLoading.hidden = true;
+                    frameReadyTimer = null;
+                }, 3000);
+            };
             gameOpenDirect.href = new URL(`${game.folder}/index.html`, window.location.href).href;
             gameFrame.title = game.title;
             gameView.hidden = false;
+            gameFrame.src = `${game.folder}/index.html`;
+            frameLoadTimer = setTimeout(() => {
+                if (loadId === activeGameLoad && !gameView.hidden && !frameLoading.hidden) {
+                    frameLoading.hidden = true;
+                    frameLoadFallback.hidden = false;
+                }
+            }, 15000);
             viewerHint.classList.remove('is-visible');
             void viewerHint.offsetWidth;
             viewerHint.classList.add('is-visible');
         }
 
         function closeGame() {
+            activeGameLoad += 1;
+            clearTimeout(frameLoadTimer);
+            clearTimeout(frameReadyTimer);
             gameView.hidden = true;
+            frameLoading.hidden = true;
+            frameLoadFallback.hidden = true;
             gameFrame.src = 'about:blank';
         }
 
-        document.getElementById('viewer-back').addEventListener('click', () => history.back());
+        gameFrame.addEventListener('load', () => {
+            if (gameFrame.src === 'about:blank') frameLoading.hidden = true;
+        });
+        document.getElementById('viewer-back').addEventListener('click', () => {
+            const hasGameHistoryEntry = history.state && history.state.arcadeGame;
+            closeGame();
+            if (hasGameHistoryEntry) history.back();
+            else history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+        });
         window.addEventListener('popstate', (event) => {
-            if (event.state && event.state.arcadeGame) {
+            if (event.state && event.state.arcadeGame && allGames.includes(event.state.arcadeGame.folder)) {
                 showGame(event.state.arcadeGame);
             } else {
                 closeGame();
@@ -694,6 +889,10 @@
         const announcementBanner = document.getElementById("announcement-banner");
         const announcementText = document.getElementById("announcement-text");
         const partyLayer = document.getElementById("party-layer");
+        const adminTabs = Array.from(document.querySelectorAll(".admin-tab"));
+        const funRandomButton = document.getElementById("admin-random-game");
+        const funConfettiButton = document.getElementById("admin-confetti-burst");
+        const funStatus = document.getElementById("fun-status");
         const config = window.CHAT_FIREBASE_CONFIG;
         const isConfigured = config && ["apiKey", "authDomain", "databaseURL", "projectId", "appId"]
             .every((key) => typeof config[key] === "string" && config[key].trim() !== "");
@@ -702,6 +901,7 @@
         let currentUid;
         let isAdmin = false;
         let announcementTimer;
+        let confettiBurstTimer;
         let hasReadSiteControls = false;
         let lastRefreshToken = null;
 
@@ -770,6 +970,43 @@
             siteControlStatus.classList.toggle("error", isError);
         }
 
+        function activateAdminTab(tab, focus = false) {
+            adminTabs.forEach((item) => {
+                const selected = item === tab;
+                item.setAttribute("aria-selected", String(selected));
+                item.tabIndex = selected ? 0 : -1;
+                document.getElementById(item.getAttribute("aria-controls")).hidden = !selected;
+            });
+            if (focus) tab.focus();
+        }
+
+        adminTabs.forEach((tab, index) => {
+            tab.addEventListener("click", () => activateAdminTab(tab));
+            tab.addEventListener("keydown", (event) => {
+                let nextIndex;
+                if (event.key === "ArrowRight") nextIndex = (index + 1) % adminTabs.length;
+                else if (event.key === "ArrowLeft") nextIndex = (index + adminTabs.length - 1) % adminTabs.length;
+                else if (event.key === "Home") nextIndex = 0;
+                else if (event.key === "End") nextIndex = adminTabs.length - 1;
+                else return;
+                event.preventDefault();
+                activateAdminTab(adminTabs[nextIndex], true);
+            });
+        });
+
+        function startConfettiBurst() {
+            clearTimeout(confettiBurstTimer);
+            partyLayer.classList.remove("party-burst");
+            partyLayer.hidden = false;
+            void partyLayer.offsetWidth;
+            partyLayer.classList.add("party-burst");
+            confettiBurstTimer = setTimeout(() => {
+                partyLayer.classList.remove("party-burst");
+                partyLayer.hidden = !partyModeToggle.checked;
+                confettiBurstTimer = null;
+            }, 2600);
+        }
+
         function setAdminControlsEnabled(enabled) {
             adminOpen.hidden = !enabled;
             viewerAdminOpen.hidden = !enabled;
@@ -779,6 +1016,8 @@
             siteThemeApply.disabled = !enabled;
             partyModeToggle.disabled = !enabled;
             forceRefreshButton.disabled = !enabled;
+            funRandomButton.disabled = !enabled;
+            funConfettiButton.disabled = !enabled;
         }
 
         function applySiteControls(settings) {
@@ -811,6 +1050,22 @@
         adminClose.addEventListener("click", () => adminPanel.close());
         adminPanel.addEventListener("click", (event) => {
             if (event.target === adminPanel) adminPanel.close();
+        });
+        funRandomButton.addEventListener("click", () => {
+            if (!isAdmin) return;
+            if (!Array.isArray(window.GAMES) || window.GAMES.length === 0 || typeof window.playRandom !== "function") {
+                funStatus.textContent = "The game library is unavailable right now.";
+                funStatus.classList.add("error");
+                return;
+            }
+            adminPanel.close();
+            window.playRandom();
+        });
+        funConfettiButton.addEventListener("click", () => {
+            if (!isAdmin) return;
+            funStatus.textContent = "Confetti launched!";
+            funStatus.classList.remove("error");
+            startConfettiBurst();
         });
 
         async function updateAdminAccess(user) {

@@ -110,6 +110,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 7. Create or log into the account that should have admin access. In **Authentication > Users**, copy its UID. In **Realtime Database > Data**, add `admins/<uid>` with the Boolean value `true` (for example, `admins/abc123: true`). Only grant this to trusted accounts. The database rules prevent changes to admin access from the website; manage this allowlist in the Firebase console.
 
 The admin control room can publish a site-wide theme and accent, toggle confetti, send or clear an announcement, and request a refresh. It can be opened while a game is running. Refresh requests reload visitors who already have the updated arcade code open; users with older code, closed tabs, or offline browsers cannot be remotely refreshed. A force refresh may interrupt a game.
+The **Fun** tab also lets an admin launch a random game or trigger a one-off confetti burst in their current tab.
 
 The web config is public by design; never put a service-account key in this site. These rules let each Firebase UID reserve a case-insensitive username once, require that reservation for every new message, and limit profile access to its owner. Each message stores its Firebase UID, which you can match to the UID in **Authentication > Users** when moderating.
 
