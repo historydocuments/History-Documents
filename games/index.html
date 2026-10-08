@@ -338,6 +338,7 @@
                 <button id="account-sign-out" class="secondary" type="button" hidden disabled>Sign out</button>
             </form>
             <p id="account-status" class="account-status" role="status" aria-live="polite">Create an account to keep your chat name when you return.</p>
+            <p id="admin-access-status" class="account-status" role="status" aria-live="polite" hidden></p>
         </div>
         <section id="admin-panel" class="admin-panel" aria-labelledby="admin-title" hidden>
             <h3 id="admin-title">Admin broadcast</h3>
@@ -549,6 +550,7 @@
         const accountLogin = document.getElementById("account-login");
         const accountSignOut = document.getElementById("account-sign-out");
         const accountStatus = document.getElementById("account-status");
+        const adminAccessStatus = document.getElementById("admin-access-status");
         const adminPanel = document.getElementById("admin-panel");
         const adminForm = document.getElementById("admin-form");
         const adminMessage = document.getElementById("admin-message");
@@ -582,6 +584,12 @@
             accountStatus.classList.toggle("error", isError);
         }
 
+        function setAdminAccessStatus(message, isError = false) {
+            adminAccessStatus.textContent = message;
+            adminAccessStatus.classList.toggle("error", isError);
+            adminAccessStatus.hidden = !message;
+        }
+
         function updateAccountControls(user, busy = false) {
             const isGuest = !user || user.isAnonymous;
             accountCreate.disabled = busy || !isGuest;
@@ -610,15 +618,19 @@
         async function updateAdminAccess(user) {
             isAdmin = false;
             adminPanel.hidden = true;
-            if (!user || user.isAnonymous) return;
+            if (!user || user.isAnonymous) {
+                setAdminAccessStatus("");
+                return;
+            }
 
             try {
                 const snapshot = await get(ref(database, `admins/${user.uid}`));
                 isAdmin = snapshot.val() === true;
                 adminPanel.hidden = !isAdmin;
+                setAdminAccessStatus(isAdmin ? "" : `Signed in. Admin panel hidden for UID ${user.uid}. In Realtime Database, set admins/${user.uid} to Boolean true; see the setup guide.`);
                 if (isAdmin) setAdminStatus("Admin access verified.");
             } catch (error) {
-                setAdminStatus("Admin access could not be checked. Review the Firebase rules in the setup guide.", true);
+                setAdminAccessStatus(`Signed in. Admin access could not be checked for UID ${user.uid}. Publish the current database rules, then set admins/${user.uid} to Boolean true; see the setup guide.`, true);
             }
         }
 
@@ -736,7 +748,7 @@
                         const profile = await loadChatProfile(user);
                         setAccountStatus(profile ? `Welcome back, ${profile.name}. Your chat name is restored.` : "Signed in. Choose a chat name and send a message to save it.");
                     } catch (error) {
-                        setAccountStatus("Signed in, but the saved chat name couldn't load. Publish the updated database rules in the setup guide.", true);
+                        setAccountStatus("Signed in successfully, but the saved chat name couldn't load. Publish the current database rules in the setup guide, then sign in again.", true);
                     }
                 }
 
@@ -774,14 +786,18 @@
                         const result = await signInWithEmailAndPassword(auth, accountEmail.value.trim(), accountPassword.value);
                         currentUid = result.user.uid;
                         await updateAdminAccess(result.user);
-                        const profile = await loadChatProfile(result.user);
-                        if (!profile) {
-                            nameInput.value = "";
-                            localStorage.removeItem("arcade-chat-name");
-                        }
                         accountPassword.value = "";
                         updateAccountControls(result.user);
-                        setAccountStatus(profile ? `Welcome back, ${profile.name}. Your chat name is restored.` : "Signed in. Choose a chat name and send a message to save it.");
+                        try {
+                            const profile = await loadChatProfile(result.user);
+                            if (!profile) {
+                                nameInput.value = "";
+                                localStorage.removeItem("arcade-chat-name");
+                            }
+                            setAccountStatus(profile ? `Welcome back, ${profile.name}. Your chat name is restored.` : "Signed in successfully. Choose a chat name and send a message to save it.");
+                        } catch (error) {
+                            setAccountStatus("Signed in successfully, but the saved chat name couldn't load. Publish the current database rules in the setup guide, then sign in again.", true);
+                        }
                     } catch (error) {
                         updateAccountControls(auth.currentUser);
                         setAccountStatus(authErrorMessage(error), true);
