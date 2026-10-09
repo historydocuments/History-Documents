@@ -328,9 +328,9 @@
                 status: "playing"
             };
         });
-        const roomData = transaction.snapshot.val();
+        const roomData = transaction.snapshot.val() || (await get(roomRef)).val();
         if (!roomData) {
-            throw new Error("The room disappeared while you were joining. Ask the host to create a new room.");
+            throw new Error("That room could not be read. Check the code and try again.");
         }
         if (!roomData.players || !getPlayerSymbol(roomData)) {
             if (roomData.players && roomData.players.o) {

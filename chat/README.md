@@ -7,7 +7,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 3. In **Realtime Database**, create a database and copy its URL (for example, `https://your-project-default-rtdb.firebaseio.com`).
 4. Copy the web app's `apiKey`, `authDomain`, `projectId`, and `appId`, plus the database URL, into [`chat-config.js`](chat-config.js).
 5. In **Authentication > Settings > Authorized domains**, add the Netlify hostname and the GitHub Pages hostname that will serve the site.
-6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, site controls, classroom rooms, and message write rules must all be live in the same database used by `chat-config.js`:
+6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, site controls, chat bans and moderation, classroom rooms, and message write rules must all be live in the same database used by `chat-config.js`:
 
 ```json
 {
@@ -62,6 +62,18 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
     "siteControl": {
       ".read": "auth != null",
       ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "defaults": {
+        ".validate": "newData.hasChildren(['theme', 'accent'])",
+        "theme": {
+          ".validate": "newData.isString() && newData.val().matches(/^(emerald|ocean|ember)$/)"
+        },
+        "accent": {
+          ".validate": "newData.isString() && newData.val().matches(/^(theme|mint|blue|coral|gold|aqua)$/)"
+        },
+        "$other": {
+          ".validate": false
+        }
+      },
       "theme": {
         ".validate": "newData.isString() && newData.val().matches(/^(local|emerald|ocean|ember)$/)"
       },
@@ -73,6 +85,21 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
       },
       "refreshToken": {
         ".validate": "newData.isString() && newData.val().matches(/^[0-9]+-[a-z0-9]+$/)"
+      },
+      "forcedGame": {
+        ".validate": "newData.hasChildren(['folder', 'token', 'sentAt']) && newData.child('folder').isString() && newData.child('folder').val().matches(/^[a-z0-9_-]+$/) && newData.child('token').isString() && newData.child('token').val().matches(/^[0-9]+-[a-z0-9]+$/) && newData.child('sentAt').isNumber()",
+        "folder": {
+          ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]+$/)"
+        },
+        "token": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9]+-[a-z0-9]+$/)"
+        },
+        "sentAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
       },
       "accessGate": {
         ".validate": "newData.hasChildren(['salt', 'hash', 'iterations']) && newData.child('salt').isString() && newData.child('salt').val().matches(/^[0-9a-f]{32}$/) && newData.child('hash').isString() && newData.child('hash').val().matches(/^[0-9a-f]{64}$/) && newData.child('iterations').isNumber() && newData.child('iterations').val() === 210000",
@@ -87,6 +114,23 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
         },
         "$other": {
           ".validate": false
+        }
+      },
+      "$other": {
+        ".validate": false
+      }
+    },
+    "chatBans": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "users": {
+        "$uid": {
+          ".validate": "newData.isBoolean()"
+        }
+      },
+      "names": {
+        "$nameKey": {
+          ".validate": "$nameKey.matches(/^[a-z0-9_]{3,20}$/) && newData.isBoolean()"
         }
       },
       "$other": {
@@ -139,7 +183,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
     "messages": {
       ".read": "auth != null",
       "$messageId": {
-        ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid && root.child('usernames').child(newData.child('nameKey').val()).val() === auth.uid",
+        ".write": "auth != null && ((data.exists() && !newData.exists() && root.child('admins').child(auth.uid).val() === true) || (!data.exists() && newData.child('uid').val() === auth.uid && root.child('usernames').child(newData.child('nameKey').val()).val() === auth.uid && root.child('chatBans/users').child(auth.uid).val() != true && root.child('chatBans/names').child(newData.child('nameKey').val()).val() != true))",
         ".validate": "newData.hasChildren(['uid', 'name', 'nameKey', 'text', 'createdAt'])",
         "uid": {
           ".validate": "newData.isString() && newData.val() === auth.uid"
@@ -169,11 +213,11 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 
 The admin control room's **Operations** tab can set or remove a shared site passcode. Publish the rules above for `siteControl/accessGate` before setting it. The passcode is stored as a salted PBKDF2 hash and visitors enter it once per tab session on the home page, arcade hub, and Tic-Tac-Toe test page. This is only a casual browser-side deterrent: GitHub Pages publishes all static files directly, and the Firebase client-readable hash can be guessed offline. It does not prevent direct access to the other game URLs, so don't use it to protect sensitive content. If the passcode is forgotten, an admin can remove `siteControl/accessGate` in the Firebase console.
 
-The Classroom page uses authenticated Realtime Database access for two-device Tic-Tac-Toe rooms. Publish the rules above before creating or joining rooms. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
+The Classroom page uses authenticated Realtime Database access for two-device Tic-Tac-Toe rooms. Publish the rules above before creating or joining rooms. If joining fails while the room still exists, verify that the latest `classroomRooms` rules are published; the page will now report a rules/slot problem rather than claiming the room vanished. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
 
-The admin control room can publish a site-wide theme and accent, toggle confetti, send or clear an announcement, and request a refresh. It can be opened while a game is running. Refresh requests reload visitors who already have the updated arcade code open; users with older code, closed tabs, or offline browsers cannot be remotely refreshed. A force refresh may interrupt a game.
-The **Fun** tab also lets an admin launch a random game or trigger a one-off confetti burst in their current tab.
+The admin control room can publish a site-wide theme and accent, set default theme and accent preferences for visitors who have not chosen a local theme, toggle confetti, send or clear an announcement, and request a refresh. It can be opened while a game is running. Refresh requests reload visitors who already have the updated arcade code open; users with older code, closed tabs, or offline browsers cannot be remotely refreshed. A force refresh may interrupt a game.
+The **Fun** tab lets an admin launch a random game or trigger a one-off confetti burst in their current tab. Admins can also force a selected game for visitors with the current arcade page connected; this replaces any game they are currently playing in the arcade frame. Visitors with closed tabs, older code, or offline browsers are not affected.
 
 The web config is public by design; never put a service-account key in this site. These rules let each Firebase UID reserve a case-insensitive username once, require that reservation for every new message, and limit profile access to its owner. Each message stores its Firebase UID, which you can match to the UID in **Authentication > Users** when moderating.
 
-Chat does not require an account: visitors can choose a name and send messages as guests. Creating an account while signed in as a guest links that guest UID to an email and password, keeping an already-claimed username attached to the account. Later, log in with the same email and password to restore the saved name. An older guest identity can only be linked from the browser where that guest session still exists. Admin announcements are sent to connected visitors and appear above the game iframe. Admins can also override visitor themes, accent colors, and confetti effects. This is a public room, so messages and usernames are visible to every visitor. For a larger public audience, add abuse reporting and server-enforced rate limits before opening the room widely.
+Chat does not require an account: visitors can choose a name and send messages as guests. Creating an account while signed in as a guest links that guest UID to an email and password, keeping an already-claimed username attached to the account. Later, log in with the same email and password to restore the saved name. An older guest identity can only be linked from the browser where that guest session still exists. Admins can delete messages, ban or unban users from message controls, and ban or unban usernames in the admin panel. These actions require the `chatBans` rules above. Bans use both Firebase UID and username; because guest identities are anonymous, a determined visitor may evade a UID-only ban by starting a new guest identity, so also ban the username. Admin announcements are sent to connected visitors and appear above the game iframe. Admins can also override visitor themes, accent colors, and confetti effects. This is a public room, so messages and usernames are visible to every visitor. For a larger public audience, add abuse reporting and server-enforced rate limits before opening the room widely.

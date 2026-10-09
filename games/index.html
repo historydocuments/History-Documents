@@ -225,6 +225,10 @@
         .chat-message.mine .chat-message-name { color: var(--primary); }
         .chat-message-text { margin: 0; padding: 9px 12px; border: 1px solid var(--chat-line); border-radius: 4px 12px 12px; background: #222e26; overflow-wrap: anywhere; white-space: pre-wrap; }
         .chat-message.mine .chat-message-text { border-color: #176844; border-radius: 12px 4px 12px 12px; background: #143326; }
+        .chat-message-actions { display: flex; gap: 6px; margin: 5px 0 0 3px; }
+        .chat-message-actions[hidden] { display: none; }
+        .chat-message-action { min-height: 28px; padding: 0 8px; border: 1px solid var(--chat-line); border-radius: 4px; background: transparent; color: var(--text); font: inherit; font-size: 0.7rem; cursor: pointer; }
+        .chat-message-action.danger { border-color: #87473f; color: #ff9d91; }
         .chat-composer { display: grid; grid-template-columns: minmax(125px, 0.38fr) minmax(0, 1fr) auto; gap: 9px; padding: 14px; border-top: 1px solid var(--chat-line); background: var(--chat-panel); }
         .chat-composer input, .chat-composer button { min-height: 44px; border: 1px solid var(--chat-line); border-radius: 5px; font: inherit; }
         .chat-composer input { min-width: 0; padding: 0 12px; outline: none; background: #111713; color: var(--text); }
@@ -415,21 +419,14 @@
             </fieldset>
             <fieldset class="settings-group">
                 <legend>Site branding</legend>
-                <p class="settings-panel-note" style="margin: 0 0 12px">Choose a name and a built-in icon for your own site branding. The tab name keeps “| Arcade Hub” so it stays identifiable.</p>
+                <p class="settings-panel-note" style="margin: 0 0 12px">Choose a name and paste an HTTP(S) link to an icon image for your site branding.</p>
                 <form id="site-identity-form">
                     <div class="identity-controls">
                         <label class="identity-control" for="site-identity-name">Site name
                             <input id="site-identity-name" type="text" maxlength="40" autocomplete="off" placeholder="My Arcade">
                         </label>
                         <label class="identity-control" for="site-identity-icon">Tab icon
-                            <select id="site-identity-icon">
-                                <option value="🕹️">🕹️ Joystick</option>
-                                <option value="🎮">🎮 Game controller</option>
-                                <option value="⭐">⭐ Star</option>
-                                <option value="🚀">🚀 Rocket</option>
-                                <option value="🎯">🎯 Target</option>
-                                <option value="🧩">🧩 Puzzle</option>
-                            </select>
+                            <input id="site-identity-icon" type="url" maxlength="2048" autocomplete="url" placeholder="https://example.com/icon.png">
                         </label>
                     </div>
                     <div class="identity-actions">
@@ -551,6 +548,17 @@
                         </div>
                     </form>
                     <p id="admin-status" class="admin-status" role="status" aria-live="polite"></p>
+                    <hr>
+                    <h3>Chat moderation</h3>
+                    <p>Ban or unban a username. You can also delete messages or ban their author directly from the chat.</p>
+                    <form id="chat-ban-form" class="admin-controls">
+                        <input id="chat-ban-name" type="text" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="off" placeholder="Username to ban or unban" aria-label="Username to ban or unban" required>
+                        <div class="admin-actions">
+                            <button id="chat-ban-submit" class="admin-primary" type="submit">Ban username</button>
+                            <button id="chat-unban-submit" class="admin-secondary" type="button">Unban username</button>
+                        </div>
+                    </form>
+                    <p id="chat-moderation-status" class="site-control-status" role="status" aria-live="polite"></p>
                 </section>
                 <section id="admin-view-appearance" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-appearance" tabindex="0" hidden>
                     <h3 id="appearance-title">Appearance and effects</h3>
@@ -582,6 +590,34 @@
                         <label class="party-toggle"><input id="party-mode-toggle" type="checkbox" disabled> Confetti</label>
                     </div>
                     <p id="site-control-status" class="site-control-status" role="status" aria-live="polite">Preferences and effects sync live; older or closed tabs are not affected.</p>
+                    <hr>
+                    <h3>Visitor defaults</h3>
+                    <p>Choose the theme and accent visitors get unless they already picked a local theme.</p>
+                    <div class="admin-settings-grid">
+                        <label class="admin-setting" for="default-theme-select">
+                            Default theme
+                            <select id="default-theme-select" disabled>
+                                <option value="emerald">Emerald</option>
+                                <option value="ocean">Ocean</option>
+                                <option value="ember">Ember</option>
+                            </select>
+                        </label>
+                        <label class="admin-setting" for="default-accent-select">
+                            Default accent
+                            <select id="default-accent-select" disabled>
+                                <option value="theme">Theme default</option>
+                                <option value="mint">Mint</option>
+                                <option value="blue">Blue</option>
+                                <option value="coral">Coral</option>
+                                <option value="gold">Gold</option>
+                                <option value="aqua">Aqua</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="admin-settings-actions">
+                        <button id="default-appearance-save" class="admin-primary" type="button" disabled>Save visitor defaults</button>
+                        <button id="default-appearance-reset" class="admin-secondary" type="button" disabled>Reset defaults</button>
+                    </div>
                 </section>
                 <section id="admin-view-operations" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-operations" tabindex="0" hidden>
                     <h3 id="operations-title">Operations</h3>
@@ -600,11 +636,16 @@
                 </section>
                 <section id="admin-view-fun" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-fun" tabindex="0" hidden>
                     <h3 id="fun-title">Arcade fun</h3>
-                    <p>Kick off a surprise game or celebrate with a quick burst of confetti. These actions only affect your current tab.</p>
+                    <p>Kick off a surprise game, send a game to everyone currently on the arcade, or celebrate with confetti.</p>
                     <div class="admin-actions">
                         <button id="admin-random-game" class="admin-primary" type="button" disabled>Surprise me with a game</button>
                         <button id="admin-confetti-burst" class="admin-secondary" type="button" disabled>Confetti burst</button>
                     </div>
+                    <label class="admin-setting" for="force-game-select">
+                        Game to force everyone to play
+                        <select id="force-game-select" disabled></select>
+                    </label>
+                    <button id="force-game-button" class="admin-primary" type="button" disabled>Force game for everyone</button>
                     <p id="fun-status" class="site-control-status" role="status" aria-live="polite"></p>
                 </section>
             </div>
@@ -917,23 +958,29 @@
         init();
     </script>
     <script type="module">
-        import { applySiteIdentity, readSiteIdentity, SITE_ICON_KEY, SITE_NAME_KEY } from "../scripts/site-identity.js";
+        import { applySiteIdentity, isValidSiteIconUrl, readSiteIdentity, SITE_ICON_KEY, SITE_NAME_KEY } from "../scripts/site-identity.js";
 
         const identityForm = document.getElementById("site-identity-form");
         const nameInput = document.getElementById("site-identity-name");
-        const iconSelect = document.getElementById("site-identity-icon");
+        const iconInput = document.getElementById("site-identity-icon");
         const status = document.getElementById("site-identity-status");
         const defaults = readSiteIdentity();
         nameInput.value = defaults.name === "Arcade Hub" ? "" : defaults.name;
-        iconSelect.value = defaults.icon;
+        iconInput.value = isValidSiteIconUrl(defaults.icon) ? defaults.icon : "";
 
         identityForm.addEventListener("submit", (event) => {
             event.preventDefault();
             const name = nameInput.value.trim().slice(0, 40);
+            const icon = iconInput.value.trim();
+            if (icon && !isValidSiteIconUrl(icon)) {
+                status.textContent = "Enter a valid HTTP(S) icon URL.";
+                return;
+            }
             try {
                 if (name) localStorage.setItem(SITE_NAME_KEY, name);
                 else localStorage.removeItem(SITE_NAME_KEY);
-                localStorage.setItem(SITE_ICON_KEY, iconSelect.value);
+                if (icon) localStorage.setItem(SITE_ICON_KEY, icon);
+                else localStorage.removeItem(SITE_ICON_KEY);
                 applySiteIdentity();
                 window.dispatchEvent(new Event("arcadeidentitychange"));
                 status.textContent = "Site branding applied on this device.";
@@ -948,7 +995,7 @@
                 localStorage.removeItem(SITE_NAME_KEY);
                 localStorage.removeItem(SITE_ICON_KEY);
                 nameInput.value = "";
-                iconSelect.value = "🕹️";
+                iconInput.value = "";
                 applySiteIdentity();
                 window.dispatchEvent(new Event("arcadeidentitychange"));
                 status.textContent = "Default Arcade Hub branding restored.";
@@ -963,7 +1010,7 @@
         import { createSitePasscodeRecord, hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "../scripts/site-passcode.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { EmailAuthProvider, getAuth, linkWithCredential, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+        import { get, getDatabase, limitToLast, onChildAdded, onChildRemoved, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
         const form = document.getElementById("chat-composer");
         const nameInput = form.elements.name;
@@ -993,6 +1040,10 @@
         const siteThemeSelect = document.getElementById("site-theme-select");
         const siteAccentSelect = document.getElementById("site-accent-select");
         const siteThemeApply = document.getElementById("site-theme-apply");
+        const defaultThemeSelect = document.getElementById("default-theme-select");
+        const defaultAccentSelect = document.getElementById("default-accent-select");
+        const defaultAppearanceSave = document.getElementById("default-appearance-save");
+        const defaultAppearanceReset = document.getElementById("default-appearance-reset");
         const partyModeToggle = document.getElementById("party-mode-toggle");
         const forceRefreshButton = document.getElementById("force-refresh-button");
         const siteControlStatus = document.getElementById("site-control-status");
@@ -1002,7 +1053,14 @@
         const adminTabs = Array.from(document.querySelectorAll(".admin-tab"));
         const funRandomButton = document.getElementById("admin-random-game");
         const funConfettiButton = document.getElementById("admin-confetti-burst");
+        const forceGameSelect = document.getElementById("force-game-select");
+        const forceGameButton = document.getElementById("force-game-button");
         const funStatus = document.getElementById("fun-status");
+        const chatBanForm = document.getElementById("chat-ban-form");
+        const chatBanName = document.getElementById("chat-ban-name");
+        const chatBanSubmit = document.getElementById("chat-ban-submit");
+        const chatUnbanSubmit = document.getElementById("chat-unban-submit");
+        const chatModerationStatus = document.getElementById("chat-moderation-status");
         const passcodeGate = document.getElementById("passcode-gate");
         const passcodeGateTitle = document.getElementById("passcode-gate-title");
         const passcodeGateDescription = document.getElementById("passcode-gate-description");
@@ -1026,8 +1084,13 @@
         let confettiBurstTimer;
         let hasReadSiteControls = false;
         let lastRefreshToken = null;
+        let lastForcedGameToken = null;
         let currentSiteControls = {};
         let currentPasscodeGate = null;
+        let chatModerationReady = false;
+        let chatBannedUsers = new Set();
+        let chatBannedNames = new Set();
+        const messageElements = new Map();
 
         const passcodeSessionKey = SITE_PASSCODE_SESSION_KEY;
 
@@ -1053,6 +1116,24 @@
         function showError(message) {
             notice.textContent = message;
             notice.classList.add("error");
+        }
+
+        function updateChatComposerState() {
+            const uidBanned = chatBannedUsers.has(currentUid);
+            const nameBanned = chatBannedNames.has(nameInput.value.trim().toLowerCase());
+            sendButton.disabled = !chatModerationReady || uidBanned || nameBanned;
+            if (uidBanned || nameBanned) {
+                showError("You are banned from chat.");
+            } else if (notice.classList.contains("error") && notice.textContent === "You are banned from chat.") {
+                notice.classList.remove("error");
+                notice.textContent = "Messages are public. Don't share personal information.";
+            }
+        }
+        nameInput.addEventListener("input", updateChatComposerState);
+
+        function setChatModerationStatus(message, isError = false) {
+            chatModerationStatus.textContent = message;
+            chatModerationStatus.classList.toggle("error", isError);
         }
 
         function setAccountStatus(message, isError = false) {
@@ -1265,6 +1346,10 @@
             siteThemeSelect.disabled = !enabled;
             siteAccentSelect.disabled = !enabled;
             siteThemeApply.disabled = !enabled;
+            defaultThemeSelect.disabled = !enabled;
+            defaultAccentSelect.disabled = !enabled;
+            defaultAppearanceSave.disabled = !enabled;
+            defaultAppearanceReset.disabled = !enabled;
             partyModeToggle.disabled = !enabled;
             forceRefreshButton.disabled = !enabled;
             sitePasscodeInput.disabled = !enabled;
@@ -1272,6 +1357,11 @@
             sitePasscodeClear.disabled = !enabled;
             funRandomButton.disabled = !enabled;
             funConfettiButton.disabled = !enabled;
+            forceGameSelect.disabled = !enabled || forceGameSelect.options.length === 0;
+            forceGameButton.disabled = !enabled || forceGameSelect.options.length === 0;
+            chatBanSubmit.disabled = !enabled;
+            chatUnbanSubmit.disabled = !enabled;
+            refreshMessageModerationControls();
         }
 
         function applySiteControls(settings) {
@@ -1279,12 +1369,33 @@
             applyPasscodeGate(settings.accessGate);
             const theme = ["local", "emerald", "ocean", "ember"].includes(settings.theme) ? settings.theme : "local";
             const accent = ["theme", "mint", "blue", "coral", "gold", "aqua"].includes(settings.accent) ? settings.accent : "theme";
-            if (theme === "local") delete document.body.dataset.globalTheme;
-            else document.body.dataset.globalTheme = theme;
-            if (accent === "theme") delete document.body.dataset.globalAccent;
-            else document.body.dataset.globalAccent = accent;
+            const defaults = settings.defaults && typeof settings.defaults === "object" ? settings.defaults : {};
+            const defaultTheme = ["emerald", "ocean", "ember"].includes(defaults.theme) ? defaults.theme : "emerald";
+            const defaultAccent = ["theme", "mint", "blue", "coral", "gold", "aqua"].includes(defaults.accent) ? defaults.accent : "theme";
+            let hasLocalTheme = false;
+            try {
+                hasLocalTheme = localStorage.getItem("arcade-theme") !== null;
+            } catch (error) {
+                console.warn("Visitor theme preference could not be checked", error);
+                hasLocalTheme = true;
+            }
+            if (theme === "local") {
+                delete document.body.dataset.globalTheme;
+                if (!hasLocalTheme) {
+                    document.body.dataset.theme = defaultTheme;
+                    document.querySelector(`input[name="theme"][value="${defaultTheme}"]`).checked = true;
+                    clearCustomTheme();
+                }
+            } else {
+                document.body.dataset.globalTheme = theme;
+            }
+            const effectiveAccent = accent === "theme" ? defaultAccent : accent;
+            if (effectiveAccent === "theme") delete document.body.dataset.globalAccent;
+            else document.body.dataset.globalAccent = effectiveAccent;
             siteThemeSelect.value = theme;
             siteAccentSelect.value = accent;
+            defaultThemeSelect.value = defaultTheme;
+            defaultAccentSelect.value = defaultAccent;
             partyModeToggle.checked = settings.partyMode === true;
             partyLayer.hidden = !partyModeToggle.checked;
 
@@ -1294,6 +1405,20 @@
                 setTimeout(() => window.location.reload(), 900);
             }
             lastRefreshToken = refreshToken;
+            const forcedGame = settings.forcedGame;
+            const forcedGameToken = forcedGame && typeof forcedGame.token === "string" ? forcedGame.token : null;
+            if (hasReadSiteControls && forcedGameToken && forcedGameToken !== lastForcedGameToken &&
+                Array.isArray(window.GAMES) && window.GAMES.includes(forcedGame.folder)) {
+                const title = forcedGame.folder.split(/[-_]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+                if (typeof window.openGame === "function") {
+                    window.openGame(forcedGame.folder, title);
+                } else {
+                    console.error("Forced game could not be opened because the game viewer is unavailable.");
+                    funStatus.textContent = "A forced game could not open. Reload the arcade and try again.";
+                    funStatus.classList.add("error");
+                }
+            }
+            lastForcedGameToken = forcedGameToken;
             hasReadSiteControls = true;
         }
 
@@ -1323,6 +1448,14 @@
             funStatus.classList.remove("error");
             startConfettiBurst();
         });
+        if (Array.isArray(window.GAMES)) {
+            window.GAMES.forEach((folder) => {
+                const option = document.createElement("option");
+                option.value = folder;
+                option.textContent = folder.split(/[-_]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+                forceGameSelect.append(option);
+            });
+        }
 
         async function updateAdminAccess(user) {
             isAdmin = false;
@@ -1331,6 +1464,7 @@
             if (!user || user.isAnonymous) {
                 setAdminAccessStatus("");
                 applyPasscodeGate(currentSiteControls.accessGate);
+                updateChatComposerState();
                 return;
             }
 
@@ -1342,9 +1476,11 @@
                 setAdminAccessStatus(isAdmin ? "" : `Signed in. Admin panel hidden for UID ${user.uid}. In Realtime Database, set admins/${user.uid} to Boolean true; see the setup guide.`);
                 applyPasscodeGate(currentSiteControls.accessGate);
                 if (isAdmin) setAdminStatus("Admin access verified.");
+                updateChatComposerState();
             } catch (error) {
                 setAdminAccessStatus(`Signed in. Admin access could not be checked for UID ${user.uid}. Publish the current database rules, then set admins/${user.uid} to Boolean true; see the setup guide.`, true);
                 applyPasscodeGate(currentSiteControls.accessGate);
+                updateChatComposerState();
             }
         }
 
@@ -1388,10 +1524,40 @@
             localStorage.setItem("arcade-chat-name", name);
         }
 
-        function addMessage(message, currentUid) {
+        function refreshMessageModerationControls() {
+            for (const [messageId, item] of messageElements) {
+                item.querySelector(".chat-message-actions")?.remove();
+                if (!isAdmin) continue;
+                const message = item.messageData;
+                const actions = document.createElement("div");
+                actions.className = "chat-message-actions";
+
+                const removeButton = document.createElement("button");
+                removeButton.type = "button";
+                removeButton.className = "chat-message-action danger";
+                removeButton.dataset.messageAction = "delete";
+                removeButton.dataset.messageId = messageId;
+                removeButton.textContent = "Delete";
+                actions.append(removeButton);
+
+                const isBanned = chatBannedUsers.has(message.uid) || chatBannedNames.has(message.nameKey);
+                const banButton = document.createElement("button");
+                banButton.type = "button";
+                banButton.className = `chat-message-action${isBanned ? "" : " danger"}`;
+                banButton.dataset.messageAction = isBanned ? "unban" : "ban";
+                banButton.dataset.messageId = messageId;
+                banButton.textContent = isBanned ? "Unban author" : "Ban author";
+                actions.append(banButton);
+                item.append(actions);
+            }
+        }
+
+        function addMessage(message, messageId, currentUid) {
+            if (!message || typeof message !== "object") return;
             emptyState.hidden = true;
             const item = document.createElement("li");
             item.className = `chat-message${message.uid === currentUid ? " mine" : ""}`;
+            item.messageData = message;
 
             const meta = document.createElement("p");
             meta.className = "chat-message-meta";
@@ -1408,13 +1574,52 @@
             body.className = "chat-message-text";
             body.textContent = message.text || "";
             item.append(meta, body);
+            messageElements.set(messageId, item);
             messageList.append(item);
 
             while (messageList.querySelectorAll(".chat-message").length > 100) {
-                messageList.querySelector(".chat-message").remove();
+                const oldest = messageList.querySelector(".chat-message");
+                if (!oldest) break;
+                for (const [key, value] of messageElements) {
+                    if (value === oldest) {
+                        messageElements.delete(key);
+                        break;
+                    }
+                }
+                oldest.remove();
             }
+            refreshMessageModerationControls();
             messageList.scrollTop = messageList.scrollHeight;
         }
+
+        messageList.addEventListener("click", async (event) => {
+            const button = event.target.closest("button[data-message-action]");
+            if (!button || !isAdmin) return;
+            const message = messageElements.get(button.dataset.messageId)?.messageData;
+            if (!message) return;
+            button.disabled = true;
+            try {
+                if (button.dataset.messageAction === "delete") {
+                    await remove(ref(database, `messages/${button.dataset.messageId}`));
+                    setChatModerationStatus(`Deleted ${message.name || "the user's"} message.`);
+                } else {
+                    const banned = button.dataset.messageAction === "ban";
+                    if (!message.uid || !/^[a-z0-9_]{3,20}$/.test(message.nameKey || "")) {
+                        throw new Error("The message does not contain a valid author identity.");
+                    }
+                    await update(ref(database, "chatBans"), {
+                        [`users/${message.uid}`]: banned ? true : null,
+                        [`names/${message.nameKey}`]: banned ? true : null
+                    });
+                    setChatModerationStatus(banned ? `${message.name || "User"} was banned from chat.` : `${message.name || "User"} was unbanned.`);
+                }
+            } catch (error) {
+                console.error("Chat moderation action failed", error);
+                setChatModerationStatus("Moderation action failed. Publish the latest chat rules, then try again.", true);
+            } finally {
+                button.disabled = false;
+            }
+        });
 
         async function connectChat() {
             if (!isConfigured) {
@@ -1437,11 +1642,35 @@
                 });
                 if (!user) user = (await signInAnonymously(auth)).user;
                 currentUid = user.uid;
+                sendButton.disabled = true;
                 const messages = query(ref(database, "messages"), limitToLast(100));
 
-                onChildAdded(messages, (snapshot) => addMessage(snapshot.val(), currentUid), (error) => {
+                onChildAdded(messages, (snapshot) => addMessage(snapshot.val(), snapshot.key, currentUid), (error) => {
                     setStatus("Connection error", "error");
                     showError(error.message);
+                });
+                onChildRemoved(messages, (snapshot) => {
+                    const item = messageElements.get(snapshot.key);
+                    if (item) {
+                        item.remove();
+                        messageElements.delete(snapshot.key);
+                    }
+                    emptyState.hidden = messageElements.size > 0;
+                }, (error) => {
+                    console.warn("Removed chat messages could not be observed", error);
+                });
+                onValue(ref(database, "chatBans"), (snapshot) => {
+                    const bans = snapshot.val() || {};
+                    chatBannedUsers = new Set(Object.keys(bans.users || {}).filter((uid) => bans.users[uid] === true));
+                    chatBannedNames = new Set(Object.keys(bans.names || {}).filter((name) => bans.names[name] === true));
+                    chatModerationReady = true;
+                    updateChatComposerState();
+                    refreshMessageModerationControls();
+                }, (error) => {
+                    console.error("Chat moderation settings could not be loaded", error);
+                    chatModerationReady = false;
+                    sendButton.disabled = true;
+                    showError("Chat moderation settings could not be checked. Ask the admin to publish the latest database rules.");
                 });
                 onValue(ref(database, "announcement"), (snapshot) => showAnnouncement(snapshot.val()), (error) => {
                     console.warn("Announcement listener failed", error);
@@ -1461,11 +1690,11 @@
                 });
                 nameInput.disabled = false;
                 textInput.disabled = false;
-                sendButton.disabled = false;
                 accountEmail.disabled = false;
                 accountPassword.disabled = false;
                 updateAccountControls(user);
                 await updateAdminAccess(user);
+                refreshMessageModerationControls();
 
                 if (!user.isAnonymous) {
                     try {
@@ -1582,6 +1811,37 @@
                     }
                 });
 
+                chatBanForm.addEventListener("submit", async (event) => {
+                    event.preventDefault();
+                    if (!isAdmin || !chatBanForm.reportValidity()) return;
+                    const nameKey = chatBanName.value.trim().toLowerCase();
+                    chatBanSubmit.disabled = true;
+                    try {
+                        await set(ref(database, `chatBans/names/${nameKey}`), true);
+                        setChatModerationStatus(`Username ${nameKey} was banned from chat.`);
+                    } catch (error) {
+                        console.error("Chat username ban failed", error);
+                        setChatModerationStatus("Username could not be banned. Publish the latest chat rules, then try again.", true);
+                    } finally {
+                        chatBanSubmit.disabled = !isAdmin;
+                    }
+                });
+
+                chatUnbanSubmit.addEventListener("click", async () => {
+                    if (!isAdmin || !chatBanForm.reportValidity()) return;
+                    const nameKey = chatBanName.value.trim().toLowerCase();
+                    chatUnbanSubmit.disabled = true;
+                    try {
+                        await remove(ref(database, `chatBans/names/${nameKey}`));
+                        setChatModerationStatus(`Username ${nameKey} was unbanned.`);
+                    } catch (error) {
+                        console.error("Chat username unban failed", error);
+                        setChatModerationStatus("Username could not be unbanned. Publish the latest chat rules, then try again.", true);
+                    } finally {
+                        chatUnbanSubmit.disabled = !isAdmin;
+                    }
+                });
+
                 siteThemeApply.addEventListener("click", async () => {
                     if (!isAdmin) return;
                     siteThemeApply.disabled = true;
@@ -1596,6 +1856,38 @@
                         setSiteControlStatus("Appearance update denied. Check the siteControl write rules in the setup guide.", true);
                     } finally {
                         siteThemeApply.disabled = false;
+                    }
+                });
+
+                defaultAppearanceSave.addEventListener("click", async () => {
+                    if (!isAdmin) return;
+                    defaultAppearanceSave.disabled = true;
+                    setSiteControlStatus("Saving visitor defaults...");
+                    try {
+                        await set(ref(database, "siteControl/defaults"), {
+                            theme: defaultThemeSelect.value,
+                            accent: defaultAccentSelect.value
+                        });
+                        setSiteControlStatus("Visitor defaults saved. Visitors without a local theme preference will use them.");
+                    } catch (error) {
+                        console.error("Visitor defaults could not be saved", error);
+                        setSiteControlStatus("Visitor defaults could not be saved. Check the siteControl rules in the setup guide.", true);
+                    } finally {
+                        defaultAppearanceSave.disabled = !isAdmin;
+                    }
+                });
+
+                defaultAppearanceReset.addEventListener("click", async () => {
+                    if (!isAdmin) return;
+                    defaultAppearanceReset.disabled = true;
+                    try {
+                        await remove(ref(database, "siteControl/defaults"));
+                        setSiteControlStatus("Visitor defaults reset to Emerald with the theme's default accent.");
+                    } catch (error) {
+                        console.error("Visitor defaults could not be reset", error);
+                        setSiteControlStatus("Visitor defaults could not be reset. Check the siteControl rules in the setup guide.", true);
+                    } finally {
+                        defaultAppearanceReset.disabled = !isAdmin;
                     }
                 });
 
@@ -1627,11 +1919,34 @@
                     }
                 });
 
+                forceGameButton.addEventListener("click", async () => {
+                    if (!isAdmin || !window.GAMES.includes(forceGameSelect.value)) return;
+                    const folder = forceGameSelect.value;
+                    const title = forceGameSelect.selectedOptions[0].textContent;
+                    if (!window.confirm(`Force everyone currently on the arcade to play ${title}? This will replace their current game.`)) return;
+                    forceGameButton.disabled = true;
+                    funStatus.textContent = `Sending ${title} to everyone currently on the arcade...`;
+                    funStatus.classList.remove("error");
+                    try {
+                        const token = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+                        await set(ref(database, "siteControl/forcedGame"), { folder, token, sentAt: Date.now() });
+                        funStatus.textContent = `${title} was sent to connected arcade visitors.`;
+                    } catch (error) {
+                        console.error("Forced game request failed", error);
+                        funStatus.textContent = "Game could not be sent. Check the siteControl rules in the setup guide.";
+                        funStatus.classList.add("error");
+                    } finally {
+                        forceGameButton.disabled = !isAdmin || forceGameSelect.options.length === 0;
+                    }
+                });
+
                 form.addEventListener("submit", async (event) => {
                     event.preventDefault();
                     const name = nameInput.value.trim();
                     const text = textInput.value.trim();
                     if (!nameInput.reportValidity() || !text || !name) return;
+                    updateChatComposerState();
+                    if (!chatModerationReady || chatBannedUsers.has(currentUid) || chatBannedNames.has(name.toLowerCase())) return;
 
                     sendButton.disabled = true;
                     notice.classList.remove("error");
@@ -1666,7 +1981,7 @@
                         const reason = error.code || error.message || "Unknown Firebase error";
                         showError(`Message could not be sent (${reason}). Check the Firebase setup and rules.`);
                     } finally {
-                        sendButton.disabled = false;
+                        updateChatComposerState();
                     }
                 });
             } catch (error) {
