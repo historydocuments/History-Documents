@@ -98,7 +98,7 @@
     import "../../scripts/site-identity.js";
     import { hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "../../scripts/site-passcode.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { browserSessionPersistence, getAuth, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
     import { get, getDatabase, onValue, ref, runTransaction } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
     const connectionStatus = document.getElementById("connection-status");
@@ -119,6 +119,7 @@
     let sharedPasscodeGate = null;
     let currentUidInitialized = false;
     let autoJoinedRoomCode = null;
+    let classroomTabChannel = null;
     const passcodeSessionKey = SITE_PASSCODE_SESSION_KEY;
     const passcodeGate = document.getElementById("passcode-gate");
     const passcodeForm = document.getElementById("passcode-form");
@@ -438,57 +439,106 @@
 
     document.getElementById("leave-room").addEventListener("click", () => leaveRoom());
 
-    function connectClassroom() {
+    function createClassroomTabId() {
+        return globalThis.crypto && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    async function getClassroomTabId() {
+        let tabId;
+        try {
+            tabId = sessionStorage.getItem("classroom-tab-id");
+            if (!tabId) {
+                tabId = createClassroomTabId();
+                sessionStorage.setItem("classroom-tab-id", tabId);
+            }
+        } catch (error) {
+            console.warn("Classroom tab identity could not be saved for this tab", error);
+            return createClassroomTabId();
+        }
+
+        if (typeof BroadcastChannel !== "function") return tabId;
+        while (true) {
+            const instanceId = createClassroomTabId();
+            let channel;
+            try {
+                channel = new BroadcastChannel(`classroom-tab-${tabId}`);
+            } catch (error) {
+                console.warn("Classroom tabs could not be checked for duplicate identities", error);
+                return tabId;
+            }
+            let alreadyInUse = false;
+            channel.addEventListener("message", (event) => {
+                const message = event.data;
+                if (!message || message.instanceId === instanceId) return;
+                if (message.type === "claim") {
+                    channel.postMessage({ type: "occupied", instanceId, target: message.instanceId });
+                } else if (message.type === "occupied" && message.target === instanceId) {
+                    alreadyInUse = true;
+                }
+            });
+            channel.postMessage({ type: "claim", instanceId });
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            if (!alreadyInUse) {
+                classroomTabChannel = channel;
+                return tabId;
+            }
+            channel.close();
+            tabId = createClassroomTabId();
+            try {
+                sessionStorage.setItem("classroom-tab-id", tabId);
+            } catch (error) {
+                console.warn("A unique Classroom tab identity could not be saved", error);
+                return tabId;
+            }
+        }
+    }
+
+    async function connectClassroom() {
         const config = window.CHAT_FIREBASE_CONFIG;
         if (!config || !["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => config[key])) {
             connectionStatus.textContent = "Classroom is not configured. See the Firebase setup guide.";
             passcodeGate.hidden = true;
             return;
         }
+        const tabId = await getClassroomTabId();
+        let auth;
         try {
-            const app = initializeApp(config);
-            const auth = getAuth(app);
+            const app = initializeApp(config, `classroom-${tabId}`);
+            auth = getAuth(app);
             database = getDatabase(app);
-            onAuthStateChanged(auth, (user) => {
-                if (!user) {
-                    signInAnonymously(auth).catch((error) => {
-                        console.error("Classroom sign-in failed", error);
-                        connectionStatus.textContent = "Could not connect. Enable anonymous sign-in in Firebase.";
-                        document.getElementById("passcode-title").textContent = "Could not check site access";
-                        passcodeStatus.textContent = "Enable Firebase anonymous sign-in, then reload.";
-                        passcodeForm.hidden = true;
-                    });
-                    return;
-                }
-                currentUid = user.uid;
-                connectionStatus.textContent = "Connected. Room updates sync across devices.";
-                if (!currentUidInitialized) {
-                    currentUidInitialized = true;
-                    onValue(ref(database, "siteControl/accessGate"), (snapshot) => {
-                        applySharedPasscodeGate(snapshot.val());
-                    }, (error) => {
-                        console.error("Shared passcode setting could not be loaded", error);
-                        document.getElementById("passcode-title").textContent = "Could not check site access";
-                        passcodeStatus.textContent = "Reload the page or contact the site admin.";
-                        passcodeForm.hidden = true;
-                        passcodeGate.hidden = false;
-                        setClassroomAccessAllowed(false);
-                    });
-                }
-            }, (error) => {
-                console.error("Classroom authentication failed", error);
-                connectionStatus.textContent = "Could not connect to Firebase Authentication.";
-                document.getElementById("passcode-title").textContent = "Could not check site access";
-                passcodeStatus.textContent = "Reload the page or contact the site admin.";
-                passcodeForm.hidden = true;
-            });
         } catch (error) {
             console.error("Classroom Firebase initialization failed", error);
             connectionStatus.textContent = "Classroom could not connect. Check the setup guide and Firebase configuration.";
             document.getElementById("passcode-title").textContent = "Could not check site access";
             passcodeStatus.textContent = "Reload the page or contact the site admin.";
             passcodeForm.hidden = true;
+            return;
         }
+
+        setPersistence(auth, browserSessionPersistence).then(() => signInAnonymously(auth)).then(({ user }) => {
+            currentUid = user.uid;
+            connectionStatus.textContent = "Connected. Room updates sync across devices.";
+            if (currentUidInitialized) return;
+            currentUidInitialized = true;
+            onValue(ref(database, "siteControl/accessGate"), (snapshot) => {
+                applySharedPasscodeGate(snapshot.val());
+            }, (error) => {
+                console.error("Shared passcode setting could not be loaded", error);
+                document.getElementById("passcode-title").textContent = "Could not check site access";
+                passcodeStatus.textContent = "Reload the page or contact the site admin.";
+                passcodeForm.hidden = true;
+                passcodeGate.hidden = false;
+                setClassroomAccessAllowed(false);
+            });
+        }).catch((error) => {
+            console.error("Classroom Firebase authentication failed", error);
+            connectionStatus.textContent = "Could not connect to Firebase Authentication.";
+            document.getElementById("passcode-title").textContent = "Could not check site access";
+            passcodeStatus.textContent = "Reload the page or contact the site admin.";
+            passcodeForm.hidden = true;
+        });
     }
 
     connectClassroom();

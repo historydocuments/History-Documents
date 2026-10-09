@@ -338,6 +338,7 @@
             .chat-composer button { grid-column: 2; grid-row: 2; }
         }
     </style>
+    <link rel="stylesheet" href="../styles/arcade-ui.css">
 </head>
 <body>
     <div id="loader">
@@ -360,6 +361,7 @@
     <header id="arcade-header">
         <h1>🕹️ Arcade Hub</h1>
         <div class="header-actions">
+            <a class="chat-link" href="#community-chat">Community</a>
             <button id="admin-open" class="admin-open" type="button" aria-controls="admin-panel" hidden>Admin</button>
             <button id="settings-toggle" class="settings-toggle" type="button" aria-controls="settings-dialog">&#9881; Settings</button>
         </div>
@@ -439,8 +441,6 @@
             <p class="settings-panel-note">Preferences are saved on this device.</p>
         </div>
     </dialog>
-    <a class="chat-link" href="#community-chat">Community chat</a>
-
     <div id="host-section">
         <h2 style="margin-top:0">🚀 Hosting Setup Required</h2>
         <p>Local folders are currently blocked by your browser. Upload to a host to enable the library:</p>
@@ -456,6 +456,16 @@
     </div>
 
     <div id="main-content">
+        <div class="library-heading">
+            <p class="library-eyebrow"><span></span> THE ARCADE IS OPEN</p>
+            <div class="library-title-row">
+                <div>
+                    <h2>Pick your next game</h2>
+                    <p>Quick matches, big adventures, and everything in between.</p>
+                </div>
+                <span id="game-count" class="game-count" aria-live="polite"></span>
+            </div>
+        </div>
         <div id="controls">
             <input type="text" id="search-bar" placeholder="Search library..." onkeyup="filterGames()">
             <button id="random-btn" onclick="playRandom()">Shuffle 🎲</button>
@@ -652,8 +662,14 @@
         </div>
     </dialog>
 
+    <footer class="site-footer">
+        <span>Made for play <span aria-hidden="true">✦</span></span>
+        <span class="build-version">Build <code id="build-version">loading</code></span>
+    </footer>
+
     <script src="games-list.js"></script>
     <script>
+        const BUILD_VERSION = "2026.10.09.3";
         let allGames = [];
         const hosts = [
             { id: 'link-netlify', url: 'https://app.netlify.com/drop/' },
@@ -807,6 +823,7 @@
         }
 
         function init() {
+            document.getElementById('build-version').textContent = BUILD_VERSION;
             checkSiteStatus();
 
             if (window.location.protocol === 'file:') {
@@ -834,6 +851,7 @@
         function renderGames(games) {
             const container = document.getElementById('game-list');
             container.innerHTML = '';
+            document.getElementById('game-count').textContent = `${games.length} ${games.length === 1 ? 'game' : 'games'}`;
             games.forEach(folder => {
                 const cleanName = folder.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
                 const card = document.createElement('a');
@@ -941,9 +959,13 @@
 
         function filterGames() {
             const query = document.getElementById('search-bar').value.toLowerCase();
+            let visibleGames = 0;
             document.querySelectorAll('.game-card').forEach(card => {
-                card.style.display = card.getAttribute('data-name').includes(query) ? 'block' : 'none';
+                const matches = card.getAttribute('data-name').includes(query);
+                card.style.display = matches ? '' : 'none';
+                if (matches) visibleGames += 1;
             });
+            document.getElementById('game-count').textContent = `${visibleGames} ${visibleGames === 1 ? 'game' : 'games'}`;
         }
 
         function playRandom() {

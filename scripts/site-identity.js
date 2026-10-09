@@ -30,8 +30,7 @@ export function readSiteIdentity() {
 
 export function applySiteIdentity() {
     const { name, icon } = readSiteIdentity();
-    const title = document.querySelector("title");
-    if (title) title.textContent = name;
+    document.title = name;
 
     let favicon = document.querySelector("link[data-site-favicon]");
     if (!favicon) {
@@ -40,6 +39,9 @@ export function applySiteIdentity() {
         favicon.dataset.siteFavicon = "true";
         document.head.append(favicon);
     }
+    document.querySelectorAll('link[rel~="icon"]').forEach((link) => {
+        if (link !== favicon) link.remove();
+    });
     if (isValidSiteIconUrl(icon)) {
         favicon.href = icon;
         return;
