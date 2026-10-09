@@ -318,7 +318,7 @@
         if (!snapshot.exists()) throw new Error("That room was not found. Check the code and try again.");
 
         const transaction = await runTransaction(roomRef, (roomData) => {
-            if (!roomData) return;
+            if (!roomData || !roomData.players) return;
             if (roomData.players.x === currentUid || roomData.players.o === currentUid) return roomData;
             if (roomData.status !== "waiting" || roomData.players.o) return;
             return {
@@ -329,8 +329,17 @@
             };
         });
         const roomData = transaction.snapshot.val();
-        if (!roomData || !getPlayerSymbol(roomData)) {
-            throw new Error("This room is full or the game has already started.");
+        if (!roomData) {
+            throw new Error("The room disappeared while you were joining. Ask the host to create a new room.");
+        }
+        if (!roomData.players || !getPlayerSymbol(roomData)) {
+            if (roomData.players && roomData.players.o) {
+                throw new Error("This room already has two players. Ask the host to create a new room.");
+            }
+            if (roomData.status !== "waiting") {
+                throw new Error("This game has already started. Ask the host to create a new room for you.");
+            }
+            throw new Error("Your player slot was not claimed. Check that the latest Classroom rules are published in Firebase, then try joining again.");
         }
         showRoom(code, roomRef, roomData);
     }
