@@ -15,9 +15,31 @@
         .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
         .doc-card { background: white; border: 1px solid var(--border); padding: 1.5rem; margin-bottom: 1.5rem; }
         .doc-link { color: #4a6fa5; text-decoration: none; font-style: italic; display: block; margin-top: 10px; }
+        .site-passcode-gate { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 20px; background: #101713; color: #edf4ef; font-family: 'Segoe UI', sans-serif; }
+        .site-passcode-gate[hidden] { display: none; }
+        .site-passcode-card { width: min(380px, 100%); padding: 24px; border: 1px solid #354139; border-radius: 10px; background: #151d18; box-shadow: 0 24px 80px #000a; }
+        .site-passcode-card h2 { color: #00ff88; }
+        .site-passcode-card p { color: #b9c7bd; font-size: 0.9rem; }
+        .site-passcode-card form { display: grid; gap: 10px; }
+        .site-passcode-card input, .site-passcode-card button { min-height: 42px; padding: 0 12px; border: 1px solid #354139; border-radius: 5px; font: inherit; }
+        .site-passcode-card input { background: #101713; color: #edf4ef; }
+        .site-passcode-card button { background: #00ff88; color: #07150e; font-weight: 700; cursor: pointer; }
+        .site-passcode-card [role="status"] { min-height: 1.2em; color: #ff9d91; }
     </style>
 </head>
 <body>
+<section id="site-passcode-gate" class="site-passcode-gate" aria-labelledby="site-passcode-title">
+    <div class="site-passcode-card">
+        <h2 id="site-passcode-title">Checking site access...</h2>
+        <p id="site-passcode-description">Checking the shared site passcode setting.</p>
+        <form id="site-passcode-form" hidden>
+            <label for="site-passcode-input">Enter passcode</label>
+            <input id="site-passcode-input" type="password" autocomplete="current-password" required>
+            <button type="submit">Unlock site</button>
+        </form>
+        <p id="site-passcode-status" role="status" aria-live="polite">Connecting...</p>
+    </div>
+</section>
 <header>
     <h1>The Heritage Archive</h1>
     <nav>
@@ -40,5 +62,95 @@
     </div>
 </div>
 
+<script src="chat/chat-config.js"></script>
+<script type="module">
+    import "./scripts/site-identity.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { get, getDatabase, ref } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+    import { hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "./scripts/site-passcode.js";
+
+    const gate = document.getElementById("site-passcode-gate");
+    const title = document.getElementById("site-passcode-title");
+    const description = document.getElementById("site-passcode-description");
+    const form = document.getElementById("site-passcode-form");
+    const input = document.getElementById("site-passcode-input");
+    const status = document.getElementById("site-passcode-status");
+    const config = window.CHAT_FIREBASE_CONFIG;
+    let passcodeRecord = null;
+
+    function showAccessError(message) {
+        title.textContent = "Could not check site access";
+        description.textContent = "The shared passcode setting could not be loaded.";
+        status.textContent = message;
+        form.hidden = true;
+        gate.hidden = false;
+    }
+
+    async function loadSiteAccess() {
+        if (window.location.protocol === "file:") {
+            gate.hidden = true;
+            return;
+        }
+        if (!config || !["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => config[key])) {
+            showAccessError("The site access service is not configured. Contact the site admin.");
+            return;
+        }
+
+        try {
+            const app = initializeApp(config);
+            const auth = getAuth(app);
+            const database = getDatabase(app);
+            await signInAnonymously(auth);
+            const snapshot = await get(ref(database, "siteControl/accessGate"));
+            passcodeRecord = snapshot.val();
+            if (!passcodeRecord) {
+                gate.hidden = true;
+                return;
+            }
+            if (!isValidSitePasscode(passcodeRecord)) {
+                showAccessError("The saved passcode setting is invalid. Contact the site admin.");
+                return;
+            }
+            if (sessionStorage.getItem(SITE_PASSCODE_SESSION_KEY) === passcodeRecord.hash) {
+                gate.hidden = true;
+                return;
+            }
+            title.textContent = "Site passcode";
+            description.textContent = "Enter the shared passcode to continue.";
+            status.textContent = "";
+            form.hidden = false;
+        } catch (error) {
+            console.error("Site access check failed", error);
+            showAccessError("Reload the page or contact the site admin.");
+        }
+    }
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!passcodeRecord) return;
+        const button = form.querySelector("button");
+        button.disabled = true;
+        status.textContent = "Checking passcode...";
+        try {
+            const hash = await hashSitePasscode(input.value, hexToBytes(passcodeRecord.salt));
+            if (hash === passcodeRecord.hash) {
+                sessionStorage.setItem(SITE_PASSCODE_SESSION_KEY, hash);
+                input.value = "";
+                gate.hidden = true;
+            } else {
+                status.textContent = "That passcode did not match.";
+                input.select();
+            }
+        } catch (error) {
+            console.error("Site passcode could not be checked", error);
+            status.textContent = error.message || "Passcode could not be checked.";
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    loadSiteAccess();
+</script>
 </body>
 </html>

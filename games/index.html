@@ -125,10 +125,12 @@
         .back-mode-option { position: relative; display: grid; min-height: 40px; place-items: center; border: 1px solid transparent; border-radius: 5px; color: #c0cec4; font-size: 0.78rem; cursor: pointer; }
         .back-mode-option:has(input:checked) { background: #24342a; color: #f3fff6; }
         .settings-panel-note { margin: 24px 0 0; color: #9eaea3; font-size: 0.78rem; }
-        .passcode-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-        .passcode-controls input, .passcode-controls button { min-height: 40px; padding: 0 10px; border: 1px solid #354139; border-radius: 5px; background: #101713; color: #edf4ef; font: inherit; }
-        .passcode-controls button { cursor: pointer; }
-        .passcode-status { min-height: 1.2em; margin: 9px 0 0; color: #9eaea3; font-size: 0.76rem; }
+        .identity-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .identity-control { display: grid; gap: 6px; color: #dce8df; font-size: 0.78rem; }
+        .identity-control input, .identity-control select { width: 100%; min-height: 38px; padding: 0 9px; border: 1px solid #354139; border-radius: 5px; background: #101713; color: #edf4ef; font: inherit; }
+        .identity-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .identity-actions button { min-height: 36px; padding: 0 10px; border: 1px solid #354139; border-radius: 5px; background: transparent; color: #dce8df; font: inherit; font-size: 0.76rem; cursor: pointer; }
+        .identity-status { min-height: 1.2em; margin: 8px 0 0; color: #9eaea3; font-size: 0.76rem; }
         .passcode-gate { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: 20px; background: #101713; color: #edf4ef; }
         .passcode-gate[hidden] { display: none; }
         .passcode-card { width: min(380px, 100%); padding: 24px; border: 1px solid #354139; border-radius: 10px; background: #151d18; box-shadow: 0 24px 80px #000a; }
@@ -139,8 +141,9 @@
         .passcode-card input { background: #101713; color: #edf4ef; }
         .passcode-card button { background: var(--primary); color: #07150e; font-weight: 700; cursor: pointer; }
         .passcode-card [role="status"] { min-height: 1.2em; margin: 8px 0 0; color: #ff9d91; font-size: 0.82rem; }
-        .classroom-open { min-height: 42px; display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid #444; border-radius: 6px; background: var(--card-bg); color: var(--text); font: inherit; font-weight: 700; text-decoration: none; }
-        .classroom-open:hover { border-color: var(--primary); color: var(--primary); }
+        .site-passcode-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+        .site-passcode-form input { min-height: 40px; padding: 0 10px; border: 1px solid #354139; border-radius: 5px; background: #101713; color: #edf4ef; font: inherit; }
+        .site-passcode-state { color: #c9c0a5; font-size: 0.78rem; }
         .game-view { position: fixed; inset: 0; z-index: 10000; background: #000; }
         .game-view[hidden] { display: none; }
         #game-frame { display: block; width: 100%; height: 100%; border: 0; background: #000; }
@@ -318,7 +321,6 @@
             #arcade-header { gap: 8px; }
             #arcade-header h1 { font-size: 1.1rem; }
             .settings-toggle, .admin-open { min-height: 38px; padding: 0 9px; font-size: 0.78rem; }
-            .classroom-open { min-height: 38px; padding: 0 9px; font-size: 0.78rem; }
             .settings-dialog-inner { padding: 20px; }
             .admin-dialog-inner { padding: 18px; }
             .admin-settings-grid { grid-template-columns: 1fr; }
@@ -338,16 +340,16 @@
         <div class="spinner"></div>
         <p style="margin-top: 20px; letter-spacing: 1px;">INITIALIZING SYSTEM...</p>
     </div>
-    <section id="passcode-gate" class="passcode-gate" aria-labelledby="passcode-gate-title" hidden>
+    <section id="passcode-gate" class="passcode-gate" aria-labelledby="passcode-gate-title">
         <div class="passcode-card">
-            <h2 id="passcode-gate-title">Arcade passcode</h2>
-            <p>This casual gate only applies in this browser. It does not secure the site's files.</p>
-            <form id="passcode-unlock-form">
+            <h2 id="passcode-gate-title">Checking site access...</h2>
+            <p id="passcode-gate-description">Checking the shared arcade passcode setting.</p>
+            <form id="passcode-unlock-form" hidden>
                 <label for="passcode-unlock">Enter passcode</label>
                 <input id="passcode-unlock" type="password" autocomplete="current-password" required>
                 <button type="submit">Unlock arcade</button>
             </form>
-            <p id="passcode-gate-status" role="status" aria-live="polite"></p>
+            <p id="passcode-gate-status" role="status" aria-live="polite">Connecting...</p>
         </div>
     </section>
 
@@ -355,7 +357,6 @@
         <h1>🕹️ Arcade Hub</h1>
         <div class="header-actions">
             <button id="admin-open" class="admin-open" type="button" aria-controls="admin-panel" hidden>Admin</button>
-            <a class="classroom-open" href="classroom-test'/index.html">Classroom</a>
             <button id="settings-toggle" class="settings-toggle" type="button" aria-controls="settings-dialog">&#9881; Settings</button>
         </div>
     </header>
@@ -413,13 +414,30 @@
                 </div>
             </fieldset>
             <fieldset class="settings-group">
-                <legend>Casual passcode gate</legend>
-                <form id="passcode-settings-form" class="passcode-controls">
-                    <input id="passcode-new" type="password" minlength="4" autocomplete="new-password" placeholder="Set a passcode (4+ characters)" aria-label="New passcode" required>
-                    <button type="submit">Save</button>
+                <legend>Site branding</legend>
+                <p class="settings-panel-note" style="margin: 0 0 12px">Choose a name and a built-in icon for your own site branding. The tab name keeps “| Arcade Hub” so it stays identifiable.</p>
+                <form id="site-identity-form">
+                    <div class="identity-controls">
+                        <label class="identity-control" for="site-identity-name">Site name
+                            <input id="site-identity-name" type="text" maxlength="40" autocomplete="off" placeholder="My Arcade">
+                        </label>
+                        <label class="identity-control" for="site-identity-icon">Tab icon
+                            <select id="site-identity-icon">
+                                <option value="🕹️">🕹️ Joystick</option>
+                                <option value="🎮">🎮 Game controller</option>
+                                <option value="⭐">⭐ Star</option>
+                                <option value="🚀">🚀 Rocket</option>
+                                <option value="🎯">🎯 Target</option>
+                                <option value="🧩">🧩 Puzzle</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="identity-actions">
+                        <button type="submit">Apply branding</button>
+                        <button id="site-identity-reset" type="button">Reset</button>
+                    </div>
                 </form>
-                <button id="passcode-clear" class="theme-reset" type="button">Remove passcode</button>
-                <p id="passcode-settings-status" class="passcode-status" role="status" aria-live="polite">Saved only in this browser. This is not site security.</p>
+                <p id="site-identity-status" class="identity-status" role="status" aria-live="polite">Saved in this browser and used by the site pages.</p>
             </fieldset>
             <p class="settings-panel-note">Preferences are saved on this device.</p>
         </div>
@@ -567,6 +585,16 @@
                 </section>
                 <section id="admin-view-operations" class="admin-section" role="tabpanel" aria-labelledby="admin-tab-operations" tabindex="0" hidden>
                     <h3 id="operations-title">Operations</h3>
+                    <h4>Shared arcade passcode</h4>
+                    <p>Set or replace the passcode visitors enter in this browser-based screen. Use at least 8 characters. This is a deterrent, not secure website access: GitHub Pages still publishes the files directly.</p>
+                    <form id="site-passcode-form" class="admin-controls site-passcode-form">
+                        <input id="site-passcode-new" type="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="New passcode (8+ characters)" aria-label="New shared arcade passcode" required disabled>
+                        <button id="site-passcode-save" class="admin-primary" type="submit" disabled>Set passcode</button>
+                    </form>
+                    <button id="site-passcode-clear" class="admin-secondary" type="button" disabled>Remove passcode</button>
+                    <p id="site-passcode-state" class="site-passcode-state" role="status" aria-live="polite">Checking whether a shared passcode is set...</p>
+                    <p id="site-passcode-admin-status" class="site-control-status" role="status" aria-live="polite"></p>
+                    <hr>
                     <p>Request connected visitors to reload the latest published version. Active games may be interrupted.</p>
                     <button id="force-refresh-button" class="admin-secondary" type="button" disabled>Refresh all visitors</button>
                 </section>
@@ -595,9 +623,6 @@
         ];
         const settingsToggle = document.getElementById('settings-toggle');
         const settingsDialog = document.getElementById('settings-dialog');
-        const passcodeGate = document.getElementById('passcode-gate');
-        const passcodeGateStatus = document.getElementById('passcode-gate-status');
-        const passcodeStorageKey = 'arcade-passcode-hash';
         const themeRadios = document.querySelectorAll('input[name="theme"]');
         const toolbarModeRadios = document.querySelectorAll('input[name="toolbar-mode"]');
         const customThemeColorInputs = {
@@ -641,77 +666,6 @@
                 localStorage.setItem(key, value);
             } catch {}
         }
-
-        async function hashPasscode(passcode) {
-            if (!window.crypto || !window.crypto.subtle) {
-                throw new Error('Secure hashing is unavailable in this browser.');
-            }
-            const bytes = new TextEncoder().encode(passcode);
-            const digest = await window.crypto.subtle.digest('SHA-256', bytes);
-            return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-        }
-
-        function initializePasscodeGate() {
-            try {
-                passcodeGate.hidden = !localStorage.getItem(passcodeStorageKey);
-            } catch (error) {
-                console.error('Passcode storage could not be read', error);
-                document.getElementById('passcode-settings-status').textContent = 'Browser storage is unavailable; the passcode gate cannot be used.';
-            }
-        }
-
-        document.getElementById('passcode-settings-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const input = document.getElementById('passcode-new');
-            const status = document.getElementById('passcode-settings-status');
-            if (input.value.length < 4) {
-                status.textContent = 'Use at least 4 characters.';
-                return;
-            }
-
-            try {
-                localStorage.setItem(passcodeStorageKey, await hashPasscode(input.value));
-                input.value = '';
-                status.textContent = 'Passcode saved in this browser. This is not site security.';
-                settingsDialog.close();
-                passcodeGate.hidden = false;
-                document.getElementById('passcode-unlock').focus();
-            } catch (error) {
-                console.error('Passcode could not be saved', error);
-                status.textContent = error.message || 'Passcode could not be saved in this browser.';
-            }
-        });
-
-        document.getElementById('passcode-clear').addEventListener('click', () => {
-            try {
-                localStorage.removeItem(passcodeStorageKey);
-                passcodeGate.hidden = true;
-                passcodeGateStatus.textContent = '';
-                document.getElementById('passcode-settings-status').textContent = 'Passcode removed from this browser.';
-            } catch (error) {
-                console.error('Passcode could not be removed', error);
-                document.getElementById('passcode-settings-status').textContent = 'Passcode could not be removed from this browser.';
-            }
-        });
-
-        document.getElementById('passcode-unlock-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const input = document.getElementById('passcode-unlock');
-            try {
-                const savedHash = localStorage.getItem(passcodeStorageKey);
-                if (savedHash && await hashPasscode(input.value) === savedHash) {
-                    passcodeGate.hidden = true;
-                    passcodeGateStatus.textContent = '';
-                    input.value = '';
-                } else {
-                    passcodeGateStatus.textContent = 'That passcode did not match.';
-                    input.select();
-                }
-            } catch (error) {
-                console.error('Passcode could not be checked', error);
-                passcodeGateStatus.textContent = error.message || 'Passcode could not be checked.';
-            }
-        });
 
         function loadCustomThemeColors() {
             let savedColors;
@@ -960,11 +914,53 @@
         }
 
         applyPreferences();
-        initializePasscodeGate();
         init();
+    </script>
+    <script type="module">
+        import { applySiteIdentity, readSiteIdentity, SITE_ICON_KEY, SITE_NAME_KEY } from "../scripts/site-identity.js";
+
+        const identityForm = document.getElementById("site-identity-form");
+        const nameInput = document.getElementById("site-identity-name");
+        const iconSelect = document.getElementById("site-identity-icon");
+        const status = document.getElementById("site-identity-status");
+        const defaults = readSiteIdentity();
+        nameInput.value = defaults.name === "Arcade Hub" ? "" : defaults.name;
+        iconSelect.value = defaults.icon;
+
+        identityForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const name = nameInput.value.trim().slice(0, 40);
+            try {
+                if (name) localStorage.setItem(SITE_NAME_KEY, name);
+                else localStorage.removeItem(SITE_NAME_KEY);
+                localStorage.setItem(SITE_ICON_KEY, iconSelect.value);
+                applySiteIdentity();
+                window.dispatchEvent(new Event("arcadeidentitychange"));
+                status.textContent = "Site branding applied on this device.";
+            } catch (error) {
+                console.error("Site branding could not be saved", error);
+                status.textContent = "Branding could not be saved. Check this browser's storage settings.";
+            }
+        });
+
+        document.getElementById("site-identity-reset").addEventListener("click", () => {
+            try {
+                localStorage.removeItem(SITE_NAME_KEY);
+                localStorage.removeItem(SITE_ICON_KEY);
+                nameInput.value = "";
+                iconSelect.value = "🕹️";
+                applySiteIdentity();
+                window.dispatchEvent(new Event("arcadeidentitychange"));
+                status.textContent = "Default Arcade Hub branding restored.";
+            } catch (error) {
+                console.error("Site branding could not be reset", error);
+                status.textContent = "Branding could not be reset. Check this browser's storage settings.";
+            }
+        });
     </script>
     <script src="../chat/chat-config.js"></script>
     <script type="module">
+        import { createSitePasscodeRecord, hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "../scripts/site-passcode.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { EmailAuthProvider, getAuth, linkWithCredential, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
         import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
@@ -1007,6 +1003,18 @@
         const funRandomButton = document.getElementById("admin-random-game");
         const funConfettiButton = document.getElementById("admin-confetti-burst");
         const funStatus = document.getElementById("fun-status");
+        const passcodeGate = document.getElementById("passcode-gate");
+        const passcodeGateTitle = document.getElementById("passcode-gate-title");
+        const passcodeGateDescription = document.getElementById("passcode-gate-description");
+        const passcodeUnlockForm = document.getElementById("passcode-unlock-form");
+        const passcodeUnlockInput = document.getElementById("passcode-unlock");
+        const passcodeGateStatus = document.getElementById("passcode-gate-status");
+        const sitePasscodeForm = document.getElementById("site-passcode-form");
+        const sitePasscodeInput = document.getElementById("site-passcode-new");
+        const sitePasscodeSave = document.getElementById("site-passcode-save");
+        const sitePasscodeClear = document.getElementById("site-passcode-clear");
+        const sitePasscodeState = document.getElementById("site-passcode-state");
+        const sitePasscodeAdminStatus = document.getElementById("site-passcode-admin-status");
         const config = window.CHAT_FIREBASE_CONFIG;
         const isConfigured = config && ["apiKey", "authDomain", "databaseURL", "projectId", "appId"]
             .every((key) => typeof config[key] === "string" && config[key].trim() !== "");
@@ -1018,6 +1026,10 @@
         let confettiBurstTimer;
         let hasReadSiteControls = false;
         let lastRefreshToken = null;
+        let currentSiteControls = {};
+        let currentPasscodeGate = null;
+
+        const passcodeSessionKey = SITE_PASSCODE_SESSION_KEY;
 
         const partyColors = ["#ff526e", "#ffd84d", "#56d6c9", "#69a7ff", "#c58cff"];
         for (let index = 0; index < 32; index += 1) {
@@ -1084,6 +1096,131 @@
             siteControlStatus.classList.toggle("error", isError);
         }
 
+        function isPasscodeUnlocked(hash) {
+            if (unlockedPasscodeHash === hash) return true;
+            try {
+                return sessionStorage.getItem(passcodeSessionKey) === hash;
+            } catch (error) {
+                console.warn("Passcode session could not be read", error);
+                return false;
+            }
+        }
+
+        function setPasscodeGateVisible(visible) {
+            passcodeGate.hidden = !visible;
+            if (visible) {
+                passcodeUnlockForm.hidden = false;
+                passcodeGateTitle.textContent = "Arcade passcode";
+                passcodeGateDescription.textContent = "Enter the shared passcode to continue.";
+            }
+        }
+
+        function applyPasscodeGate(settings) {
+            const gate = settings && typeof settings === "object" ? settings : null;
+            if (!gate) {
+                currentPasscodeGate = null;
+                sitePasscodeState.textContent = "No shared passcode is set.";
+                passcodeGate.hidden = true;
+                passcodeUnlockForm.hidden = true;
+                return;
+            }
+
+            if (!isValidSitePasscode(gate)) {
+                currentPasscodeGate = null;
+                sitePasscodeState.textContent = "The saved passcode setting is invalid. Update it from the admin panel.";
+                if (isAdmin) {
+                    passcodeGate.hidden = true;
+                    return;
+                }
+                passcodeGateTitle.textContent = "Access settings unavailable";
+                passcodeGateDescription.textContent = "The shared passcode setting could not be checked.";
+                passcodeGateStatus.textContent = "Contact the site admin to repair the passcode setting.";
+                passcodeUnlockForm.hidden = true;
+                passcodeGate.hidden = false;
+                return;
+            }
+
+            currentPasscodeGate = gate;
+            sitePasscodeState.textContent = "A shared passcode is active.";
+            passcodeGateStatus.textContent = "";
+            const unlocked = isPasscodeUnlocked(gate.hash) || isAdmin;
+            if (unlocked) {
+                setPasscodeGateVisible(false);
+            } else {
+                setPasscodeGateVisible(true);
+            }
+        }
+
+        let unlockedPasscodeHash = null;
+
+        passcodeUnlockForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!currentPasscodeGate) return;
+            const submitButton = passcodeUnlockForm.querySelector("button");
+            submitButton.disabled = true;
+            passcodeGateStatus.textContent = "Checking passcode...";
+            try {
+                const hash = await hashSitePasscode(passcodeUnlockInput.value, hexToBytes(currentPasscodeGate.salt));
+                if (hash === currentPasscodeGate.hash) {
+                    unlockedPasscodeHash = hash;
+                    try {
+                        sessionStorage.setItem(passcodeSessionKey, hash);
+                    } catch (error) {
+                        console.warn("Passcode session could not be saved", error);
+                    }
+                    passcodeUnlockInput.value = "";
+                    passcodeGateStatus.textContent = "";
+                    setPasscodeGateVisible(false);
+                } else {
+                    passcodeGateStatus.textContent = "That passcode did not match.";
+                    passcodeUnlockInput.select();
+                }
+            } catch (error) {
+                console.error("Shared passcode could not be checked", error);
+                passcodeGateStatus.textContent = error.message || "Passcode could not be checked.";
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+        sitePasscodeForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!isAdmin || sitePasscodeInput.value.length < 8) return;
+            sitePasscodeSave.disabled = true;
+            sitePasscodeAdminStatus.textContent = "Saving shared passcode...";
+            sitePasscodeAdminStatus.classList.remove("error");
+            try {
+                const record = await createSitePasscodeRecord(sitePasscodeInput.value);
+                await set(ref(database, "siteControl/accessGate"), record);
+                sitePasscodeInput.value = "";
+                sitePasscodeAdminStatus.textContent = "Shared passcode saved. Visitors will need it to open this arcade.";
+            } catch (error) {
+                console.error("Shared passcode could not be saved", error);
+                sitePasscodeAdminStatus.textContent = "Passcode could not be saved. Publish the updated siteControl rules in the setup guide.";
+                sitePasscodeAdminStatus.classList.add("error");
+            } finally {
+                sitePasscodeSave.disabled = !isAdmin;
+            }
+        });
+
+        sitePasscodeClear.addEventListener("click", async () => {
+            if (!isAdmin || !window.confirm("Remove the shared arcade passcode for everyone?")) return;
+            sitePasscodeClear.disabled = true;
+            sitePasscodeAdminStatus.textContent = "Removing shared passcode...";
+            sitePasscodeAdminStatus.classList.remove("error");
+            try {
+                await remove(ref(database, "siteControl/accessGate"));
+                unlockedPasscodeHash = null;
+                sitePasscodeAdminStatus.textContent = "Shared passcode removed.";
+            } catch (error) {
+                console.error("Shared passcode could not be removed", error);
+                sitePasscodeAdminStatus.textContent = "Passcode could not be removed. Check the siteControl database rules.";
+                sitePasscodeAdminStatus.classList.add("error");
+            } finally {
+                sitePasscodeClear.disabled = !isAdmin;
+            }
+        });
+
         function activateAdminTab(tab, focus = false) {
             adminTabs.forEach((item) => {
                 const selected = item === tab;
@@ -1130,11 +1267,16 @@
             siteThemeApply.disabled = !enabled;
             partyModeToggle.disabled = !enabled;
             forceRefreshButton.disabled = !enabled;
+            sitePasscodeInput.disabled = !enabled;
+            sitePasscodeSave.disabled = !enabled;
+            sitePasscodeClear.disabled = !enabled;
             funRandomButton.disabled = !enabled;
             funConfettiButton.disabled = !enabled;
         }
 
         function applySiteControls(settings) {
+            currentSiteControls = settings;
+            applyPasscodeGate(settings.accessGate);
             const theme = ["local", "emerald", "ocean", "ember"].includes(settings.theme) ? settings.theme : "local";
             const accent = ["theme", "mint", "blue", "coral", "gold", "aqua"].includes(settings.accent) ? settings.accent : "theme";
             if (theme === "local") delete document.body.dataset.globalTheme;
@@ -1188,6 +1330,7 @@
             setAdminControlsEnabled(false);
             if (!user || user.isAnonymous) {
                 setAdminAccessStatus("");
+                applyPasscodeGate(currentSiteControls.accessGate);
                 return;
             }
 
@@ -1197,9 +1340,11 @@
                 adminPanel.hidden = !isAdmin;
                 setAdminControlsEnabled(isAdmin);
                 setAdminAccessStatus(isAdmin ? "" : `Signed in. Admin panel hidden for UID ${user.uid}. In Realtime Database, set admins/${user.uid} to Boolean true; see the setup guide.`);
+                applyPasscodeGate(currentSiteControls.accessGate);
                 if (isAdmin) setAdminStatus("Admin access verified.");
             } catch (error) {
                 setAdminAccessStatus(`Signed in. Admin access could not be checked for UID ${user.uid}. Publish the current database rules, then set admins/${user.uid} to Boolean true; see the setup guide.`, true);
+                applyPasscodeGate(currentSiteControls.accessGate);
             }
         }
 
@@ -1273,6 +1418,7 @@
 
         async function connectChat() {
             if (!isConfigured) {
+                passcodeGate.hidden = true;
                 setStatus("Setup required", "error");
                 document.getElementById("chat-setup").hidden = false;
                 showError("Chat is not connected yet. Complete the Firebase setup to enable messaging.");
@@ -1302,6 +1448,11 @@
                 });
                 onValue(ref(database, "siteControl"), (snapshot) => applySiteControls(snapshot.val() || {}), (error) => {
                     console.warn("Site controls listener failed", error);
+                    passcodeGateTitle.textContent = "Could not check site access";
+                    passcodeGateDescription.textContent = "The shared passcode setting could not be loaded.";
+                    passcodeGateStatus.textContent = "Reload the page or contact the site admin.";
+                    passcodeUnlockForm.hidden = true;
+                    passcodeGate.hidden = false;
                     if (isAdmin) setSiteControlStatus("Site controls could not load. Check the siteControl read rule in the setup guide.", true);
                 });
                 document.getElementById("announcement-dismiss").addEventListener("click", () => {
@@ -1520,6 +1671,11 @@
                 });
             } catch (error) {
                 console.error("Chat connection failed", error);
+                passcodeGateTitle.textContent = "Could not check site access";
+                passcodeGateDescription.textContent = "The shared passcode setting could not be loaded.";
+                passcodeGateStatus.textContent = "Reload the page or contact the site admin.";
+                passcodeUnlockForm.hidden = true;
+                passcodeGate.hidden = false;
                 setStatus("Connection error", "error");
                 showError("Couldn't connect to chat. Check the setup guide, then reload the page.");
             }

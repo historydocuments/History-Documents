@@ -74,6 +74,21 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
       "refreshToken": {
         ".validate": "newData.isString() && newData.val().matches(/^[0-9]+-[a-z0-9]+$/)"
       },
+      "accessGate": {
+        ".validate": "newData.hasChildren(['salt', 'hash', 'iterations']) && newData.child('salt').isString() && newData.child('salt').val().matches(/^[0-9a-f]{32}$/) && newData.child('hash').isString() && newData.child('hash').val().matches(/^[0-9a-f]{64}$/) && newData.child('iterations').isNumber() && newData.child('iterations').val() === 210000",
+        "salt": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)"
+        },
+        "hash": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{64}$/)"
+        },
+        "iterations": {
+          ".validate": "newData.isNumber() && newData.val() === 210000"
+        },
+        "$other": {
+          ".validate": false
+        }
+      },
       "$other": {
         ".validate": false
       }
@@ -151,6 +166,8 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 ```
 
 7. Create or log into the account that should have admin access. In **Authentication > Users**, copy its UID. In **Realtime Database > Data**, add `admins/<uid>` with the Boolean value `true` (for example, `admins/abc123: true`). Only grant this to trusted accounts. The database rules prevent changes to admin access from the website; manage this allowlist in the Firebase console.
+
+The admin control room's **Operations** tab can set or remove a shared site passcode. Publish the rules above for `siteControl/accessGate` before setting it. The passcode is stored as a salted PBKDF2 hash and visitors enter it once per tab session on the home page, arcade hub, and Tic-Tac-Toe test page. This is only a casual browser-side deterrent: GitHub Pages publishes all static files directly, and the Firebase client-readable hash can be guessed offline. It does not prevent direct access to the other game URLs, so don't use it to protect sensitive content. If the passcode is forgotten, an admin can remove `siteControl/accessGate` in the Firebase console.
 
 The Classroom page uses authenticated Realtime Database access for two-device Tic-Tac-Toe rooms. Publish the rules above before creating or joining rooms. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
 

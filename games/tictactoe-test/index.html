@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Classroom | Arcade Hub</title>
+    <title>Tic-Tac-Toe Test | Arcade Hub</title>
     <style>
         :root { color-scheme: dark; --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #00ff88; --line: #39453e; }
         * { box-sizing: border-box; }
@@ -44,22 +44,22 @@
     </style>
 </head>
 <body>
-<section id="passcode-gate" class="passcode-gate" aria-labelledby="passcode-title" hidden>
+<section id="passcode-gate" class="passcode-gate" aria-labelledby="passcode-title">
     <div class="passcode-card">
-        <h2 id="passcode-title">Arcade passcode</h2>
-        <p class="muted">This casual gate only applies in this browser. It does not secure the site's files.</p>
-        <form id="passcode-form">
+        <h2 id="passcode-title">Checking site access...</h2>
+        <p class="muted">Checking the shared arcade passcode setting.</p>
+        <form id="passcode-form" hidden>
             <label for="passcode-input">Enter passcode</label>
             <input id="passcode-input" type="password" autocomplete="current-password" required>
-            <button type="submit">Unlock classroom</button>
+            <button type="submit">Unlock game</button>
         </form>
-        <p id="passcode-status" role="status" aria-live="polite"></p>
+        <p id="passcode-status" role="status" aria-live="polite">Connecting...</p>
     </div>
 </section>
 <main>
     <header>
         <a href="../index.html">&larr; Back to Arcade Hub</a>
-        <h1>Classroom</h1>
+        <h1>Tic-Tac-Toe Test</h1>
         <p class="muted">Play Tic-Tac-Toe together on two devices. Create a room, then share its link or six-character code.</p>
         <p id="connection-status" role="status" aria-live="polite">Connecting to the classroom service...</p>
     </header>
@@ -95,6 +95,8 @@
 </main>
 <script src="../../chat/chat-config.js"></script>
 <script type="module">
+    import "../../scripts/site-identity.js";
+    import { hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "../../scripts/site-passcode.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
     import { get, getDatabase, onValue, ref, runTransaction } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
@@ -114,6 +116,14 @@
     let stopRoomListener = null;
     let currentRoom = null;
     let movePending = false;
+    let sharedPasscodeGate = null;
+    let currentUidInitialized = false;
+    let autoJoinedRoomCode = null;
+    const passcodeSessionKey = SITE_PASSCODE_SESSION_KEY;
+    const passcodeGate = document.getElementById("passcode-gate");
+    const passcodeForm = document.getElementById("passcode-form");
+    const passcodeInput = document.getElementById("passcode-input");
+    const passcodeStatus = document.getElementById("passcode-status");
 
     for (let index = 0; index < 9; index += 1) {
         const cell = document.createElement("button");
@@ -197,6 +207,84 @@
         history.replaceState(null, "", window.location.pathname);
         setLobbyStatus(message);
     }
+
+    function setClassroomAccessAllowed(allowed) {
+        passcodeGate.hidden = allowed;
+        document.getElementById("create-button").disabled = !allowed;
+        document.getElementById("join-button").disabled = !allowed;
+        if (!allowed) return;
+        const roomCode = new URLSearchParams(window.location.search).get("room");
+        if (roomCode) {
+            roomInput.value = roomCode.toUpperCase();
+            if (autoJoinedRoomCode !== roomCode.toUpperCase()) {
+                autoJoinedRoomCode = roomCode.toUpperCase();
+                joinRoom(autoJoinedRoomCode, playerName.value.trim() || "Player").catch((error) => {
+                    console.error("Classroom invite could not be joined", error);
+                    setLobbyStatus(error.message || "Could not join the invited room.", true);
+                });
+            }
+        }
+    }
+
+    function applySharedPasscodeGate(record) {
+        if (!record) {
+            sharedPasscodeGate = null;
+            passcodeGate.hidden = true;
+            setClassroomAccessAllowed(true);
+            return;
+        }
+
+        if (!isValidSitePasscode(record)) {
+            sharedPasscodeGate = null;
+            passcodeGate.hidden = false;
+            document.getElementById("passcode-title").textContent = "Access settings unavailable";
+            passcodeStatus.textContent = "Contact the site admin to repair the passcode setting.";
+            passcodeForm.hidden = true;
+            setClassroomAccessAllowed(false);
+            return;
+        }
+
+        sharedPasscodeGate = record;
+        document.getElementById("passcode-title").textContent = "Arcade passcode";
+        passcodeForm.hidden = false;
+        let isUnlocked = false;
+        try {
+            isUnlocked = sessionStorage.getItem(passcodeSessionKey) === record.hash;
+        } catch (error) {
+            console.warn("Passcode session could not be read", error);
+        }
+        passcodeStatus.textContent = isUnlocked ? "" : "Enter the shared passcode to continue.";
+        setClassroomAccessAllowed(isUnlocked);
+    }
+
+    passcodeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!sharedPasscodeGate) return;
+        const submitButton = passcodeForm.querySelector("button");
+        submitButton.disabled = true;
+        passcodeStatus.textContent = "Checking passcode...";
+        try {
+            const hash = await hashSitePasscode(passcodeInput.value, hexToBytes(sharedPasscodeGate.salt));
+            if (hash === sharedPasscodeGate.hash) {
+                try {
+                    sessionStorage.setItem(passcodeSessionKey, hash);
+                } catch (error) {
+                    console.warn("Passcode session could not be saved", error);
+                }
+                passcodeInput.value = "";
+                passcodeStatus.textContent = "";
+                setClassroomAccessAllowed(true);
+            } else {
+                passcodeStatus.textContent = "That passcode did not match.";
+                passcodeInput.select();
+            }
+        } catch (error) {
+            console.error("Shared passcode could not be checked", error);
+            passcodeStatus.textContent = error.message || "Passcode could not be checked.";
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
 
     function createCode() {
         const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -345,6 +433,7 @@
         const config = window.CHAT_FIREBASE_CONFIG;
         if (!config || !["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => config[key])) {
             connectionStatus.textContent = "Classroom is not configured. See the Firebase setup guide.";
+            passcodeGate.hidden = true;
             return;
         }
         try {
@@ -356,65 +445,44 @@
                     signInAnonymously(auth).catch((error) => {
                         console.error("Classroom sign-in failed", error);
                         connectionStatus.textContent = "Could not connect. Enable anonymous sign-in in Firebase.";
+                        document.getElementById("passcode-title").textContent = "Could not check site access";
+                        passcodeStatus.textContent = "Enable Firebase anonymous sign-in, then reload.";
+                        passcodeForm.hidden = true;
                     });
                     return;
                 }
                 currentUid = user.uid;
                 connectionStatus.textContent = "Connected. Room updates sync across devices.";
-                document.getElementById("create-button").disabled = false;
-                document.getElementById("join-button").disabled = false;
-                const roomCode = new URLSearchParams(window.location.search).get("room");
-                if (roomCode && lobby.hidden === false) {
-                    roomInput.value = roomCode.toUpperCase();
-                    joinRoom(roomCode.toUpperCase(), playerName.value.trim() || "Player").catch((error) => {
-                        console.error("Classroom invite could not be joined", error);
-                        setLobbyStatus(error.message || "Could not join the invited room.", true);
+                if (!currentUidInitialized) {
+                    currentUidInitialized = true;
+                    onValue(ref(database, "siteControl/accessGate"), (snapshot) => {
+                        applySharedPasscodeGate(snapshot.val());
+                    }, (error) => {
+                        console.error("Shared passcode setting could not be loaded", error);
+                        document.getElementById("passcode-title").textContent = "Could not check site access";
+                        passcodeStatus.textContent = "Reload the page or contact the site admin.";
+                        passcodeForm.hidden = true;
+                        passcodeGate.hidden = false;
+                        setClassroomAccessAllowed(false);
                     });
                 }
             }, (error) => {
                 console.error("Classroom authentication failed", error);
                 connectionStatus.textContent = "Could not connect to Firebase Authentication.";
+                document.getElementById("passcode-title").textContent = "Could not check site access";
+                passcodeStatus.textContent = "Reload the page or contact the site admin.";
+                passcodeForm.hidden = true;
             });
         } catch (error) {
             console.error("Classroom Firebase initialization failed", error);
             connectionStatus.textContent = "Classroom could not connect. Check the setup guide and Firebase configuration.";
+            document.getElementById("passcode-title").textContent = "Could not check site access";
+            passcodeStatus.textContent = "Reload the page or contact the site admin.";
+            passcodeForm.hidden = true;
         }
     }
 
-    const passcodeGate = document.getElementById("passcode-gate");
-    const passcodeStatus = document.getElementById("passcode-status");
-    async function hashPasscode(value) {
-        if (!window.crypto || !window.crypto.subtle) throw new Error("Secure hashing is unavailable in this browser.");
-        const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-        return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-    }
-
-    try {
-        const savedPasscode = localStorage.getItem("arcade-passcode-hash");
-        if (!savedPasscode) connectClassroom();
-        else passcodeGate.hidden = false;
-    } catch (error) {
-        console.error("Classroom passcode storage could not be read", error);
-        passcodeStatus.textContent = "Browser storage is unavailable.";
-        passcodeGate.hidden = false;
-    }
-
-    document.getElementById("passcode-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        try {
-            const savedPasscode = localStorage.getItem("arcade-passcode-hash");
-            const enteredPasscode = document.getElementById("passcode-input").value;
-            if (savedPasscode && await hashPasscode(enteredPasscode) === savedPasscode) {
-                passcodeGate.hidden = true;
-                connectClassroom();
-            } else {
-                passcodeStatus.textContent = "That passcode did not match.";
-            }
-        } catch (error) {
-            console.error("Classroom passcode could not be checked", error);
-            passcodeStatus.textContent = error.message || "Passcode could not be checked.";
-        }
-    });
+    connectClassroom();
 </script>
 </body>
 </html>
