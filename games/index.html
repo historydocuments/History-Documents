@@ -125,6 +125,22 @@
         .back-mode-option { position: relative; display: grid; min-height: 40px; place-items: center; border: 1px solid transparent; border-radius: 5px; color: #c0cec4; font-size: 0.78rem; cursor: pointer; }
         .back-mode-option:has(input:checked) { background: #24342a; color: #f3fff6; }
         .settings-panel-note { margin: 24px 0 0; color: #9eaea3; font-size: 0.78rem; }
+        .passcode-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+        .passcode-controls input, .passcode-controls button { min-height: 40px; padding: 0 10px; border: 1px solid #354139; border-radius: 5px; background: #101713; color: #edf4ef; font: inherit; }
+        .passcode-controls button { cursor: pointer; }
+        .passcode-status { min-height: 1.2em; margin: 9px 0 0; color: #9eaea3; font-size: 0.76rem; }
+        .passcode-gate { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: 20px; background: #101713; color: #edf4ef; }
+        .passcode-gate[hidden] { display: none; }
+        .passcode-card { width: min(380px, 100%); padding: 24px; border: 1px solid #354139; border-radius: 10px; background: #151d18; box-shadow: 0 24px 80px #000a; }
+        .passcode-card h2 { margin: 0 0 8px; color: var(--primary); }
+        .passcode-card p { color: #b9c7bd; font-size: 0.9rem; }
+        .passcode-card form { display: grid; gap: 10px; }
+        .passcode-card input, .passcode-card button { min-height: 42px; padding: 0 12px; border: 1px solid #354139; border-radius: 5px; font: inherit; }
+        .passcode-card input { background: #101713; color: #edf4ef; }
+        .passcode-card button { background: var(--primary); color: #07150e; font-weight: 700; cursor: pointer; }
+        .passcode-card [role="status"] { min-height: 1.2em; margin: 8px 0 0; color: #ff9d91; font-size: 0.82rem; }
+        .classroom-open { min-height: 42px; display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid #444; border-radius: 6px; background: var(--card-bg); color: var(--text); font: inherit; font-weight: 700; text-decoration: none; }
+        .classroom-open:hover { border-color: var(--primary); color: var(--primary); }
         .game-view { position: fixed; inset: 0; z-index: 10000; background: #000; }
         .game-view[hidden] { display: none; }
         #game-frame { display: block; width: 100%; height: 100%; border: 0; background: #000; }
@@ -302,6 +318,7 @@
             #arcade-header { gap: 8px; }
             #arcade-header h1 { font-size: 1.1rem; }
             .settings-toggle, .admin-open { min-height: 38px; padding: 0 9px; font-size: 0.78rem; }
+            .classroom-open { min-height: 38px; padding: 0 9px; font-size: 0.78rem; }
             .settings-dialog-inner { padding: 20px; }
             .admin-dialog-inner { padding: 18px; }
             .admin-settings-grid { grid-template-columns: 1fr; }
@@ -321,11 +338,24 @@
         <div class="spinner"></div>
         <p style="margin-top: 20px; letter-spacing: 1px;">INITIALIZING SYSTEM...</p>
     </div>
+    <section id="passcode-gate" class="passcode-gate" aria-labelledby="passcode-gate-title" hidden>
+        <div class="passcode-card">
+            <h2 id="passcode-gate-title">Arcade passcode</h2>
+            <p>This casual gate only applies in this browser. It does not secure the site's files.</p>
+            <form id="passcode-unlock-form">
+                <label for="passcode-unlock">Enter passcode</label>
+                <input id="passcode-unlock" type="password" autocomplete="current-password" required>
+                <button type="submit">Unlock arcade</button>
+            </form>
+            <p id="passcode-gate-status" role="status" aria-live="polite"></p>
+        </div>
+    </section>
 
     <header id="arcade-header">
         <h1>🕹️ Arcade Hub</h1>
         <div class="header-actions">
             <button id="admin-open" class="admin-open" type="button" aria-controls="admin-panel" hidden>Admin</button>
+            <a class="classroom-open" href="classroom-test'/index.html">Classroom</a>
             <button id="settings-toggle" class="settings-toggle" type="button" aria-controls="settings-dialog">&#9881; Settings</button>
         </div>
     </header>
@@ -381,6 +411,15 @@
                     <label class="back-mode-option"><input type="radio" name="toolbar-mode" value="hover"><span>On hover</span></label>
                     <label class="back-mode-option"><input type="radio" name="toolbar-mode" value="off"><span>Off</span></label>
                 </div>
+            </fieldset>
+            <fieldset class="settings-group">
+                <legend>Casual passcode gate</legend>
+                <form id="passcode-settings-form" class="passcode-controls">
+                    <input id="passcode-new" type="password" minlength="4" autocomplete="new-password" placeholder="Set a passcode (4+ characters)" aria-label="New passcode" required>
+                    <button type="submit">Save</button>
+                </form>
+                <button id="passcode-clear" class="theme-reset" type="button">Remove passcode</button>
+                <p id="passcode-settings-status" class="passcode-status" role="status" aria-live="polite">Saved only in this browser. This is not site security.</p>
             </fieldset>
             <p class="settings-panel-note">Preferences are saved on this device.</p>
         </div>
@@ -556,6 +595,9 @@
         ];
         const settingsToggle = document.getElementById('settings-toggle');
         const settingsDialog = document.getElementById('settings-dialog');
+        const passcodeGate = document.getElementById('passcode-gate');
+        const passcodeGateStatus = document.getElementById('passcode-gate-status');
+        const passcodeStorageKey = 'arcade-passcode-hash';
         const themeRadios = document.querySelectorAll('input[name="theme"]');
         const toolbarModeRadios = document.querySelectorAll('input[name="toolbar-mode"]');
         const customThemeColorInputs = {
@@ -599,6 +641,77 @@
                 localStorage.setItem(key, value);
             } catch {}
         }
+
+        async function hashPasscode(passcode) {
+            if (!window.crypto || !window.crypto.subtle) {
+                throw new Error('Secure hashing is unavailable in this browser.');
+            }
+            const bytes = new TextEncoder().encode(passcode);
+            const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+            return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+
+        function initializePasscodeGate() {
+            try {
+                passcodeGate.hidden = !localStorage.getItem(passcodeStorageKey);
+            } catch (error) {
+                console.error('Passcode storage could not be read', error);
+                document.getElementById('passcode-settings-status').textContent = 'Browser storage is unavailable; the passcode gate cannot be used.';
+            }
+        }
+
+        document.getElementById('passcode-settings-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const input = document.getElementById('passcode-new');
+            const status = document.getElementById('passcode-settings-status');
+            if (input.value.length < 4) {
+                status.textContent = 'Use at least 4 characters.';
+                return;
+            }
+
+            try {
+                localStorage.setItem(passcodeStorageKey, await hashPasscode(input.value));
+                input.value = '';
+                status.textContent = 'Passcode saved in this browser. This is not site security.';
+                settingsDialog.close();
+                passcodeGate.hidden = false;
+                document.getElementById('passcode-unlock').focus();
+            } catch (error) {
+                console.error('Passcode could not be saved', error);
+                status.textContent = error.message || 'Passcode could not be saved in this browser.';
+            }
+        });
+
+        document.getElementById('passcode-clear').addEventListener('click', () => {
+            try {
+                localStorage.removeItem(passcodeStorageKey);
+                passcodeGate.hidden = true;
+                passcodeGateStatus.textContent = '';
+                document.getElementById('passcode-settings-status').textContent = 'Passcode removed from this browser.';
+            } catch (error) {
+                console.error('Passcode could not be removed', error);
+                document.getElementById('passcode-settings-status').textContent = 'Passcode could not be removed from this browser.';
+            }
+        });
+
+        document.getElementById('passcode-unlock-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const input = document.getElementById('passcode-unlock');
+            try {
+                const savedHash = localStorage.getItem(passcodeStorageKey);
+                if (savedHash && await hashPasscode(input.value) === savedHash) {
+                    passcodeGate.hidden = true;
+                    passcodeGateStatus.textContent = '';
+                    input.value = '';
+                } else {
+                    passcodeGateStatus.textContent = 'That passcode did not match.';
+                    input.select();
+                }
+            } catch (error) {
+                console.error('Passcode could not be checked', error);
+                passcodeGateStatus.textContent = error.message || 'Passcode could not be checked.';
+            }
+        });
 
         function loadCustomThemeColors() {
             let savedColors;
@@ -847,6 +960,7 @@
         }
 
         applyPreferences();
+        initializePasscodeGate();
         init();
     </script>
     <script src="../chat/chat-config.js"></script>

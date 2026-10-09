@@ -7,7 +7,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 3. In **Realtime Database**, create a database and copy its URL (for example, `https://your-project-default-rtdb.firebaseio.com`).
 4. Copy the web app's `apiKey`, `authDomain`, `projectId`, and `appId`, plus the database URL, into [`chat-config.js`](chat-config.js).
 5. In **Authentication > Settings > Authorized domains**, add the Netlify hostname and the GitHub Pages hostname that will serve the site.
-6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, site controls, and message write rules must all be live in the same database used by `chat-config.js`:
+6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, site controls, classroom rooms, and message write rules must all be live in the same database used by `chat-config.js`:
 
 ```json
 {
@@ -78,6 +78,49 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
         ".validate": false
       }
     },
+    "classroomRooms": {
+      "$roomCode": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('players/x').val() === auth.uid) || (data.exists() && (data.child('players/x').val() === auth.uid || data.child('players/o').val() === auth.uid || (data.child('status').val() === 'waiting' && data.child('players/o').val() === null && newData.child('players/o').val() === auth.uid && newData.child('players/x').val() === data.child('players/x').val()))))",
+        ".validate": "newData.hasChildren(['players', 'names', 'board', 'turn', 'status', 'createdAt']) && newData.child('players/x').isString() && (newData.child('players/o').val() === null || newData.child('players/o').isString()) && newData.child('board').numChildren() === 9 && newData.child('turn').val().matches(/^(x|o)$/) && newData.child('status').val().matches(/^(waiting|playing|won|draw)$/) && (newData.child('winner').val() === null || newData.child('winner').val().matches(/^(x|o)$/)) && newData.child('createdAt').isNumber()",
+        "players": {
+          "x": {
+            ".validate": "newData.isString() && ((!data.exists() && newData.val() === auth.uid) || newData.val() === data.val())"
+          },
+          "o": {
+            ".validate": "newData.val() === null || (newData.isString() && ((!data.exists() && newData.val() === auth.uid) || newData.val() === data.val()))"
+          }
+        },
+        "names": {
+          "x": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "o": {
+            ".validate": "newData.val() === null || (newData.isString() && newData.val().length <= 20)"
+          }
+        },
+        "board": {
+          "$index": {
+            ".validate": "$index.matches(/^[0-8]$/) && newData.isString() && newData.val().matches(/^(x|o)?$/)"
+          }
+        },
+        "turn": {
+          ".validate": "newData.isString() && newData.val().matches(/^(x|o)$/)"
+        },
+        "status": {
+          ".validate": "newData.isString() && newData.val().matches(/^(waiting|playing|won|draw)$/)"
+        },
+        "winner": {
+          ".validate": "newData.val() === null || (newData.isString() && newData.val().matches(/^(x|o)$/))"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "messages": {
       ".read": "auth != null",
       "$messageId": {
@@ -108,6 +151,8 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 ```
 
 7. Create or log into the account that should have admin access. In **Authentication > Users**, copy its UID. In **Realtime Database > Data**, add `admins/<uid>` with the Boolean value `true` (for example, `admins/abc123: true`). Only grant this to trusted accounts. The database rules prevent changes to admin access from the website; manage this allowlist in the Firebase console.
+
+The Classroom page uses authenticated Realtime Database access for two-device Tic-Tac-Toe rooms. Publish the rules above before creating or joining rooms. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
 
 The admin control room can publish a site-wide theme and accent, toggle confetti, send or clear an announcement, and request a refresh. It can be opened while a game is running. Refresh requests reload visitors who already have the updated arcade code open; users with older code, closed tabs, or offline browsers cannot be remotely refreshed. A force refresh may interrupt a game.
 The **Fun** tab also lets an admin launch a random game or trigger a one-off confetti burst in their current tab.

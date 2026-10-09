@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Classroom | Arcade Hub</title>
+    <style>
+        :root { color-scheme: dark; --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #00ff88; --line: #39453e; }
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; padding: 24px; display: grid; place-items: center; background: var(--bg); color: var(--text); font: 16px "Segoe UI", sans-serif; }
+        main { width: min(680px, 100%); }
+        header, section { padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+        header { margin-bottom: 16px; }
+        h1, h2, p { margin-top: 0; }
+        h1 { margin-bottom: 8px; color: var(--accent); }
+        .muted, #connection-status, #room-status { color: #a9b4aa; }
+        a { color: var(--accent); }
+        form { display: grid; gap: 10px; margin-top: 16px; }
+        label { font-size: 0.9rem; font-weight: 650; }
+        input, button { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+        input { width: 100%; background: #101713; color: var(--text); }
+        button { background: var(--accent); color: #07150e; font-weight: 750; cursor: pointer; }
+        button:disabled { cursor: not-allowed; opacity: 0.55; }
+        .secondary { border-color: var(--line); background: #101713; color: var(--text); }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+        .actions button { flex: 1 1 160px; }
+        .room-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .room-heading h2 { margin-bottom: 4px; }
+        #room-code { color: var(--accent); font-size: 1.15rem; font-weight: 800; letter-spacing: 0.1em; }
+        #share-link { overflow-wrap: anywhere; font-size: 0.86rem; }
+        .board { display: grid; grid-template-columns: repeat(3, minmax(70px, 1fr)); gap: 8px; max-width: 360px; margin: 24px auto; }
+        .cell { aspect-ratio: 1; min-height: 70px; border: 1px solid var(--line); background: #101713; color: var(--text); font-size: clamp(2rem, 10vw, 3.5rem); }
+        .cell[data-mark="x"] { color: var(--accent); }
+        .cell[data-mark="o"] { color: #58d3e5; }
+        .passcode-gate { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: #101713; }
+        .passcode-gate[hidden] { display: none; }
+        .passcode-card { width: min(380px, 100%); padding: 24px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+        .passcode-card h2 { color: var(--accent); }
+        .passcode-card form { margin-top: 0; }
+        #passcode-status { min-height: 1.2em; margin: 8px 0 0; color: #ff9d91; }
+        [hidden] { display: none !important; }
+        :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+        @media (max-width: 480px) { body { padding: 14px; } header, section { padding: 18px; } .room-heading { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<section id="passcode-gate" class="passcode-gate" aria-labelledby="passcode-title" hidden>
+    <div class="passcode-card">
+        <h2 id="passcode-title">Arcade passcode</h2>
+        <p class="muted">This casual gate only applies in this browser. It does not secure the site's files.</p>
+        <form id="passcode-form">
+            <label for="passcode-input">Enter passcode</label>
+            <input id="passcode-input" type="password" autocomplete="current-password" required>
+            <button type="submit">Unlock classroom</button>
+        </form>
+        <p id="passcode-status" role="status" aria-live="polite"></p>
+    </div>
+</section>
+<main>
+    <header>
+        <a href="../index.html">&larr; Back to Arcade Hub</a>
+        <h1>Classroom</h1>
+        <p class="muted">Play Tic-Tac-Toe together on two devices. Create a room, then share its link or six-character code.</p>
+        <p id="connection-status" role="status" aria-live="polite">Connecting to the classroom service...</p>
+    </header>
+    <section id="lobby">
+        <label for="player-name">Your name</label>
+        <input id="player-name" maxlength="20" autocomplete="nickname" placeholder="Player" value="Player">
+        <form id="create-form">
+            <button id="create-button" type="submit" disabled>Create a room</button>
+        </form>
+        <form id="join-form">
+            <label for="room-input">Join with a room code</label>
+            <input id="room-input" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="6-character code" aria-describedby="room-status" required>
+            <button id="join-button" class="secondary" type="submit" disabled>Join room</button>
+        </form>
+        <p id="room-status" role="status" aria-live="polite"></p>
+    </section>
+    <section id="room" hidden>
+        <div class="room-heading">
+            <div>
+                <h2>Room <span id="room-code"></span></h2>
+                <p id="players"></p>
+            </div>
+            <button id="copy-link" class="secondary" type="button">Copy invite link</button>
+        </div>
+        <p id="share-link" class="muted"></p>
+        <p id="game-status" role="status" aria-live="polite">Waiting for another player...</p>
+        <div id="board" class="board" role="group" aria-label="Tic-Tac-Toe board"></div>
+        <div class="actions">
+            <button id="new-game" class="secondary" type="button">New game</button>
+            <button id="leave-room" class="secondary" type="button">Leave room</button>
+        </div>
+    </section>
+</main>
+<script src="../../chat/chat-config.js"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { get, getDatabase, onValue, ref, runTransaction } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+    const connectionStatus = document.getElementById("connection-status");
+    const lobby = document.getElementById("lobby");
+    const roomPanel = document.getElementById("room");
+    const roomStatus = document.getElementById("room-status");
+    const playerName = document.getElementById("player-name");
+    const roomInput = document.getElementById("room-input");
+    const boardElement = document.getElementById("board");
+    const cells = [];
+    let database;
+    let currentUid = null;
+    let activeRoomCode = null;
+    let activeRoomRef = null;
+    let stopRoomListener = null;
+    let currentRoom = null;
+    let movePending = false;
+
+    for (let index = 0; index < 9; index += 1) {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "cell";
+        cell.setAttribute("aria-label", `Square ${index + 1}, empty`);
+        cell.addEventListener("click", () => playMove(index));
+        boardElement.appendChild(cell);
+        cells.push(cell);
+    }
+
+    function setLobbyStatus(message, isError = false) {
+        roomStatus.textContent = message;
+        roomStatus.style.color = isError ? "#ff9d91" : "";
+    }
+
+    function getPlayerSymbol(roomData) {
+        if (roomData.players.x === currentUid) return "x";
+        if (roomData.players.o === currentUid) return "o";
+        return null;
+    }
+
+    function renderRoom(roomData) {
+        currentRoom = roomData;
+        const symbol = getPlayerSymbol(roomData);
+        const opponent = symbol === "x" ? "o" : "x";
+        document.getElementById("players").textContent =
+            `X: ${roomData.names.x || "Waiting"}  ·  O: ${roomData.names.o || "Waiting"}`;
+        const turnText = roomData.status === "waiting"
+            ? "Waiting for another player to join..."
+            : roomData.status === "draw"
+                ? "It's a draw!"
+                : roomData.status === "won"
+                    ? `${roomData.winner.toUpperCase()} wins!`
+                    : roomData.turn === symbol
+                        ? `Your turn (${symbol.toUpperCase()})`
+                        : `Waiting for ${opponent.toUpperCase()} to play...`;
+        document.getElementById("game-status").textContent = turnText;
+
+        roomData.board.forEach((mark, index) => {
+            const cell = cells[index];
+            cell.textContent = mark ? mark.toUpperCase() : "";
+            cell.dataset.mark = mark || "";
+            cell.setAttribute("aria-label", `Square ${index + 1}, ${mark ? mark.toUpperCase() : "empty"}`);
+            cell.disabled = !symbol || roomData.status !== "playing" || roomData.turn !== symbol || Boolean(mark) || movePending;
+        });
+    }
+
+    function showRoom(code, roomRef, roomData) {
+        if (stopRoomListener) stopRoomListener();
+        activeRoomCode = code;
+        activeRoomRef = roomRef;
+        lobby.hidden = true;
+        roomPanel.hidden = false;
+        document.getElementById("room-code").textContent = code;
+        const invite = new URL(window.location.href);
+        invite.searchParams.set("room", code);
+        document.getElementById("share-link").textContent = invite.href;
+        history.replaceState(null, "", invite.href);
+        renderRoom(roomData);
+        stopRoomListener = onValue(roomRef, (snapshot) => {
+            if (!snapshot.exists()) {
+                leaveRoom("This room no longer exists.");
+                return;
+            }
+            renderRoom(snapshot.val());
+        }, (error) => {
+            console.error("Classroom room listener failed", error);
+            document.getElementById("game-status").textContent = "Room updates stopped. Check the Realtime Database rules and reload.";
+        });
+    }
+
+    function leaveRoom(message = "") {
+        if (stopRoomListener) stopRoomListener();
+        stopRoomListener = null;
+        activeRoomCode = null;
+        activeRoomRef = null;
+        currentRoom = null;
+        roomPanel.hidden = true;
+        lobby.hidden = false;
+        history.replaceState(null, "", window.location.pathname);
+        setLobbyStatus(message);
+    }
+
+    function createCode() {
+        const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        return Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+    }
+
+    async function createRoom(name) {
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            const code = createCode();
+            const roomRef = ref(database, `classroomRooms/${code}`);
+            const result = await runTransaction(roomRef, (existing) => existing || {
+                players: { x: currentUid, o: null },
+                names: { x: name, o: null },
+                board: Array(9).fill(""),
+                turn: "x",
+                status: "waiting",
+                winner: null,
+                createdAt: Date.now()
+            });
+            if (result.committed && result.snapshot.val().players.x === currentUid) {
+                showRoom(code, roomRef, result.snapshot.val());
+                return;
+            }
+        }
+        throw new Error("Could not reserve a room code. Please try again.");
+    }
+
+    async function joinRoom(code, name) {
+        const roomRef = ref(database, `classroomRooms/${code}`);
+        const snapshot = await get(roomRef);
+        if (!snapshot.exists()) throw new Error("That room was not found. Check the code and try again.");
+
+        const transaction = await runTransaction(roomRef, (roomData) => {
+            if (!roomData) return;
+            if (roomData.players.x === currentUid || roomData.players.o === currentUid) return roomData;
+            if (roomData.status !== "waiting" || roomData.players.o) return;
+            return {
+                ...roomData,
+                players: { ...roomData.players, o: currentUid },
+                names: { ...roomData.names, o: name },
+                status: "playing"
+            };
+        });
+        const roomData = transaction.snapshot.val();
+        if (!roomData || !getPlayerSymbol(roomData)) {
+            throw new Error("This room is full or the game has already started.");
+        }
+        showRoom(code, roomRef, roomData);
+    }
+
+    async function playMove(index) {
+        if (!activeRoomRef || !currentRoom || movePending) return;
+        movePending = true;
+        renderRoom(currentRoom);
+        const wins = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+        try {
+            const result = await runTransaction(activeRoomRef, (roomData) => {
+                if (!roomData || roomData.status !== "playing" || roomData.board[index]) return;
+                const symbol = getPlayerSymbol(roomData);
+                if (!symbol || roomData.turn !== symbol) return;
+                const board = roomData.board.slice();
+                board[index] = symbol;
+                const won = wins.some((line) => line.every((cellIndex) => board[cellIndex] === symbol));
+                const draw = !won && board.every(Boolean);
+                return {
+                    ...roomData,
+                    board,
+                    turn: symbol === "x" ? "o" : "x",
+                    status: won ? "won" : draw ? "draw" : "playing",
+                    winner: won ? symbol : null
+                };
+            });
+            if (!result.committed) document.getElementById("game-status").textContent = "That move is no longer available.";
+        } catch (error) {
+            console.error("Classroom move failed", error);
+            document.getElementById("game-status").textContent = "Move failed. Check the Realtime Database rules and try again.";
+        } finally {
+            movePending = false;
+            if (currentRoom) renderRoom(currentRoom);
+        }
+    }
+
+    document.getElementById("create-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setLobbyStatus("Creating room...");
+        try {
+            await createRoom(playerName.value.trim() || "Player");
+        } catch (error) {
+            console.error("Classroom room creation failed", error);
+            setLobbyStatus(error.message || "Could not create a room.", true);
+        }
+    });
+
+    document.getElementById("join-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const code = roomInput.value.trim().toUpperCase();
+        if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
+            setLobbyStatus("Enter a valid six-character room code.", true);
+            return;
+        }
+        setLobbyStatus("Joining room...");
+        try {
+            await joinRoom(code, playerName.value.trim() || "Player");
+        } catch (error) {
+            console.error("Classroom room join failed", error);
+            setLobbyStatus(error.message || "Could not join the room.", true);
+        }
+    });
+
+    document.getElementById("copy-link").addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(document.getElementById("share-link").textContent);
+            document.getElementById("copy-link").textContent = "Invite link copied";
+        } catch (error) {
+            console.error("Invite link could not be copied", error);
+            document.getElementById("game-status").textContent = "Copy failed. Select and copy the invite link shown above.";
+        }
+    });
+
+    document.getElementById("new-game").addEventListener("click", async () => {
+        if (!activeRoomRef) return;
+        try {
+            await runTransaction(activeRoomRef, (roomData) => {
+                if (!roomData || !getPlayerSymbol(roomData)) return;
+                return {
+                    ...roomData,
+                    board: Array(9).fill(""),
+                    turn: "x",
+                    status: roomData.players.o ? "playing" : "waiting",
+                    winner: null
+                };
+            });
+        } catch (error) {
+            console.error("Classroom game reset failed", error);
+            document.getElementById("game-status").textContent = "Could not start a new game. Check the database rules.";
+        }
+    });
+
+    document.getElementById("leave-room").addEventListener("click", () => leaveRoom());
+
+    function connectClassroom() {
+        const config = window.CHAT_FIREBASE_CONFIG;
+        if (!config || !["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => config[key])) {
+            connectionStatus.textContent = "Classroom is not configured. See the Firebase setup guide.";
+            return;
+        }
+        try {
+            const app = initializeApp(config);
+            const auth = getAuth(app);
+            database = getDatabase(app);
+            onAuthStateChanged(auth, (user) => {
+                if (!user) {
+                    signInAnonymously(auth).catch((error) => {
+                        console.error("Classroom sign-in failed", error);
+                        connectionStatus.textContent = "Could not connect. Enable anonymous sign-in in Firebase.";
+                    });
+                    return;
+                }
+                currentUid = user.uid;
+                connectionStatus.textContent = "Connected. Room updates sync across devices.";
+                document.getElementById("create-button").disabled = false;
+                document.getElementById("join-button").disabled = false;
+                const roomCode = new URLSearchParams(window.location.search).get("room");
+                if (roomCode && lobby.hidden === false) {
+                    roomInput.value = roomCode.toUpperCase();
+                    joinRoom(roomCode.toUpperCase(), playerName.value.trim() || "Player").catch((error) => {
+                        console.error("Classroom invite could not be joined", error);
+                        setLobbyStatus(error.message || "Could not join the invited room.", true);
+                    });
+                }
+            }, (error) => {
+                console.error("Classroom authentication failed", error);
+                connectionStatus.textContent = "Could not connect to Firebase Authentication.";
+            });
+        } catch (error) {
+            console.error("Classroom Firebase initialization failed", error);
+            connectionStatus.textContent = "Classroom could not connect. Check the setup guide and Firebase configuration.";
+        }
+    }
+
+    const passcodeGate = document.getElementById("passcode-gate");
+    const passcodeStatus = document.getElementById("passcode-status");
+    async function hashPasscode(value) {
+        if (!window.crypto || !window.crypto.subtle) throw new Error("Secure hashing is unavailable in this browser.");
+        const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+        return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    try {
+        const savedPasscode = localStorage.getItem("arcade-passcode-hash");
+        if (!savedPasscode) connectClassroom();
+        else passcodeGate.hidden = false;
+    } catch (error) {
+        console.error("Classroom passcode storage could not be read", error);
+        passcodeStatus.textContent = "Browser storage is unavailable.";
+        passcodeGate.hidden = false;
+    }
+
+    document.getElementById("passcode-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        try {
+            const savedPasscode = localStorage.getItem("arcade-passcode-hash");
+            const enteredPasscode = document.getElementById("passcode-input").value;
+            if (savedPasscode && await hashPasscode(enteredPasscode) === savedPasscode) {
+                passcodeGate.hidden = true;
+                connectClassroom();
+            } else {
+                passcodeStatus.textContent = "That passcode did not match.";
+            }
+        } catch (error) {
+            console.error("Classroom passcode could not be checked", error);
+            passcodeStatus.textContent = error.message || "Passcode could not be checked.";
+        }
+    });
+</script>
+</body>
+</html>
