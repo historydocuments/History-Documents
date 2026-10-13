@@ -170,7 +170,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
           ".validate": "newData.isBoolean()"
         },
         "hostUid": {
-          ".validate": "newData.isString() && (newData.val() === data.val() || (!data.exists() && newData.val() === auth.uid && newData.parent().parent().child('players/x').val() === auth.uid))"
+          ".validate": "newData.isString() && newData.val() === newData.parent().child('players/x').val()"
         },
         "fen": {
           ".validate": "newData.val() === null || (newData.isString() && newData.val().length <= 100)"

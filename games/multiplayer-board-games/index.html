@@ -343,6 +343,15 @@
         return game === "chess" ? "Chess" : "Tic-Tac-Toe";
     }
 
+    function isPermissionDenied(error) {
+        return /permission_denied|permission denied/i.test(`${error && error.code || ""} ${error && error.message || ""}`);
+    }
+
+    function roomPermissionMessage(operation) {
+        const databaseUrl = window.CHAT_FIREBASE_CONFIG && window.CHAT_FIREBASE_CONFIG.databaseURL;
+        return `Firebase denied ${operation}. Check classroomRooms read/write and validation rules${databaseUrl ? ` in ${databaseUrl}` : ""}, then publish them.`;
+    }
+
     function updatePublicRoom(roomCode, roomData) {
         const listingRef = ref(database, `classroomPublicRooms/${roomCode}`);
         if (roomData.status !== "waiting" || roomData.isPrivate === true) return remove(listingRef);
@@ -421,7 +430,9 @@
         const chatQuery = query(ref(database, `classroomRoomChats/${code}`), limitToLast(50));
         stopChatListener = onChildAdded(chatQuery, (snapshot) => addChatMessage(snapshot.val()), (error) => {
             console.error("Multiplayer room chat could not be loaded", error);
-            $("chat-status").textContent = "Chat could not load. Check the Firebase room chat rules.";
+            $("chat-status").textContent = isPermissionDenied(error)
+                ? "Firebase denied chat access. Check classroomRoomChats rules and confirm this account is a room member."
+                : "Chat could not load. Check the Firebase room chat rules.";
         });
         $("chat-input").disabled = false;
         $("chat-send").disabled = false;
@@ -585,7 +596,9 @@
             }, (error) => {
                 console.error("Public multiplayer rooms could not be loaded", error);
                 $("room-list").innerHTML = '<p class="empty-list">Public rooms could not load. Check the Firebase multiplayer room rules.</p>';
-                setLobbyStatus("Public room listing is unavailable. Check the current Firebase rules.", true);
+                setLobbyStatus(isPermissionDenied(error)
+                    ? "Firebase denied public room listing. Check classroomPublicRooms/.read in the published rules."
+                    : "Public room listing is unavailable. Check the current Firebase rules.", true);
             });
         }
         if (!allowed) {
@@ -851,7 +864,9 @@
         $("create-button").disabled = true;
         try { await createRoom(); } catch (error) {
             console.error("Multiplayer room creation failed", error);
-            setLobbyStatus(error.message || "Could not create a room.", true);
+            setLobbyStatus(isPermissionDenied(error)
+                ? roomPermissionMessage("room creation")
+                : error.message || "Could not create a room.", true);
         } finally { $("create-button").disabled = !currentUid || passcodeGate.hidden === false; }
     });
 
@@ -865,7 +880,9 @@
         setLobbyStatus("Joining room...");
         try { await joinRoom(code); } catch (error) {
             console.error("Multiplayer room join failed", error);
-            setLobbyStatus(error.message || "Could not join the room.", true);
+            setLobbyStatus(isPermissionDenied(error)
+                ? roomPermissionMessage("joining this room")
+                : error.message || "Could not join the room.", true);
         }
     });
 
