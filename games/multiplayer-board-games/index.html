@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#121212">
+    <title>Multiplayer Board Games | Arcade Hub</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #121212;
+            --card: #1e1e1e;
+            --raised: #252a27;
+            --text: #e0e0e0;
+            --muted: #a9b4aa;
+            --accent: #00ff88;
+            --line: #39453e;
+            --danger: #ff9d91;
+            --board-light: #e7dfca;
+            --board-dark: #76917e;
+        }
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; padding: 24px; background: var(--bg); color: var(--text); font: 16px "Segoe UI", sans-serif; }
+        body[data-theme="ocean"] { --bg: #102027; --card: #1b3038; --raised: #243d46; --text: #e2f1f4; --muted: #aec2c7; --accent: #58d3e5; --line: #39545d; --board-dark: #66868d; }
+        body[data-theme="ember"] { --bg: #211815; --card: #30221d; --raised: #3a2b25; --text: #f4e8df; --muted: #c9b5a9; --accent: #ff9a62; --line: #5b4035; --board-dark: #9d7056; }
+        body[data-theme="custom"] { --bg: var(--custom-bg, #121212); --card: var(--custom-card, #1e1e1e); --text: var(--custom-text, #e0e0e0); --accent: var(--custom-accent, #00ff88); --raised: color-mix(in srgb, var(--card) 82%, white 18%); }
+        body[data-global-theme="ocean"] { --bg: #102027; --card: #1b3038; --raised: #243d46; --text: #e2f1f4; --muted: #aec2c7; --accent: #58d3e5; --line: #39545d; --board-dark: #66868d; }
+        body[data-global-theme="ember"] { --bg: #211815; --card: #30221d; --raised: #3a2b25; --text: #f4e8df; --muted: #c9b5a9; --accent: #ff9a62; --line: #5b4035; --board-dark: #9d7056; }
+        body[data-global-theme="emerald"] { --bg: #121212; --card: #1e1e1e; --raised: #252a27; --text: #e0e0e0; --muted: #a9b4aa; --accent: #00ff88; --line: #39453e; --board-dark: #76917e; }
+        body[data-accent="mint"] { --accent: #00e88b; }
+        body[data-accent="blue"] { --accent: #63a6ff; }
+        body[data-accent="coral"] { --accent: #ff7e89; }
+        body[data-accent="gold"] { --accent: #ffc857; }
+        body[data-accent="aqua"] { --accent: #4dd0e1; }
+        button, input, select { font: inherit; }
+        button, input, select { min-height: 42px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; }
+        button { background: var(--accent); color: #101713; font-weight: 750; cursor: pointer; }
+        button:disabled { cursor: not-allowed; opacity: .55; }
+        button.secondary, select, input { background: var(--raised); color: var(--text); }
+        a { color: var(--accent); }
+        [hidden] { display: none !important; }
+        :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+        .page { width: min(1180px, 100%); margin: 0 auto; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+        .topbar h1 { margin: 0; color: var(--accent); font-size: clamp(1.5rem, 4vw, 2rem); }
+        .top-actions { display: flex; align-items: center; gap: 12px; }
+        #connection-status, .muted { color: var(--muted); }
+        #connection-status { margin: 0 0 16px; font-size: .9rem; }
+        .panel { padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+        .lobby-grid { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr); gap: 18px; }
+        h2, h3, p { margin-top: 0; }
+        h2 { margin-bottom: 14px; }
+        .create-fields { display: grid; gap: 13px; }
+        .create-fields label { display: grid; gap: 6px; font-weight: 650; }
+        .privacy-label { display: flex !important; align-items: center; gap: 9px !important; font-weight: 500 !important; }
+        .privacy-label input { min-height: auto; width: 18px; height: 18px; accent-color: var(--accent); }
+        .form-row { display: flex; gap: 8px; }
+        .form-row input { flex: 1; min-width: 0; }
+        .form-row button { flex: 0 0 auto; }
+        .status { min-height: 1.4em; margin: 10px 0 0; color: var(--muted); }
+        .status.error { color: var(--danger); }
+        .room-list { display: grid; gap: 9px; max-height: 420px; overflow: auto; }
+        .room-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); }
+        .room-card p { margin: 3px 0 0; color: var(--muted); font-size: .88rem; }
+        .room-card button { white-space: nowrap; }
+        .empty-list { margin: 0; padding: 18px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); text-align: center; }
+        .room-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+        .room-top h2 { margin: 0 0 6px; }
+        #room-code { color: var(--accent); letter-spacing: .1em; }
+        #share-link { margin: 8px 0 0; overflow-wrap: anywhere; font-size: .85rem; }
+        .room-layout { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(260px, 340px); gap: 16px; align-items: start; }
+        .game-panel, .chat-panel { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--raised); }
+        .game-panel { text-align: center; }
+        #game-status { min-height: 1.5em; margin-bottom: 14px; color: var(--muted); }
+        .players { margin-bottom: 12px; font-weight: 700; }
+        #tic-board { display: grid; grid-template-columns: repeat(3, minmax(68px, 1fr)); gap: 8px; width: min(100%, 390px); margin: 0 auto 16px; }
+        .tic-cell { aspect-ratio: 1; min-height: 68px; font-size: clamp(2rem, 9vw, 3.6rem); }
+        .tic-cell[data-mark="x"] { color: var(--accent); }
+        .tic-cell[data-mark="o"] { color: #58d3e5; }
+        .chess-area { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; width: min(100%, 540px); margin: 0 auto 12px; }
+        .rank-labels { display: grid; grid-template-rows: repeat(8, 1fr); align-items: center; color: var(--muted); font-size: .72rem; }
+        .chess-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); aspect-ratio: 1; overflow: hidden; border-radius: 5px; }
+        .chess-square { position: relative; display: grid; place-items: center; min-height: 0; padding: 0; border: 0; border-radius: 0; color: #17201a; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(1.45rem, 5.4vw, 3.5rem); line-height: 1; }
+        .chess-square.light { background: var(--board-light); }
+        .chess-square.dark { background: var(--board-dark); }
+        .chess-square.selected { box-shadow: inset 0 0 0 4px var(--accent); }
+        .chess-square.legal::after { width: 24%; height: 24%; border-radius: 50%; background: #18261e77; content: ""; }
+        .chess-square.capture::after { position: absolute; inset: 5%; width: auto; height: auto; border: 4px solid #18261e88; border-radius: 50%; background: transparent; }
+        .chess-square.last-move { background-image: linear-gradient(#f5ee5970, #f5ee5970); }
+        .chess-square:disabled { cursor: default; opacity: 1; }
+        .file-labels { display: grid; grid-template-columns: repeat(8, 1fr); grid-column: 2; color: var(--muted); font-size: .72rem; }
+        .chess-tools { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .chess-tools label { color: var(--muted); font-size: .86rem; }
+        .chess-tools select { min-height: 34px; padding: 5px 8px; }
+        #chess-moves { max-height: 110px; overflow: auto; margin: 0 auto 14px; color: var(--muted); font-size: .82rem; text-align: left; }
+        .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+        .chat-panel { display: flex; flex-direction: column; min-height: 460px; }
+        .chat-panel h3 { margin-bottom: 10px; }
+        #chat-messages { display: flex; flex: 1; flex-direction: column; gap: 10px; min-height: 250px; max-height: 450px; overflow-y: auto; margin: 0 0 12px; padding: 0; list-style: none; }
+        .chat-message { padding: 8px 10px; border-radius: 9px; background: var(--card); overflow-wrap: anywhere; }
+        .chat-message strong { color: var(--accent); font-size: .84rem; }
+        .chat-message p { margin: 3px 0 0; white-space: pre-wrap; }
+        .chat-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+        .chat-form input { min-width: 0; }
+        .passcode-gate { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: var(--bg); }
+        .passcode-card { width: min(380px, 100%); padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+        .passcode-card h2 { color: var(--accent); }
+        .passcode-card form { display: grid; gap: 10px; }
+        #passcode-status { min-height: 1.2em; color: var(--danger); }
+        @media (max-width: 760px) {
+            body { padding: 14px; }
+            .lobby-grid, .room-layout { grid-template-columns: 1fr; }
+            .chat-panel { min-height: 360px; }
+        }
+        @media (max-width: 480px) {
+            .topbar, .room-top { align-items: flex-start; }
+            .topbar { flex-direction: column; }
+            .top-actions { width: 100%; justify-content: space-between; }
+            .panel { padding: 15px; }
+            .room-card { align-items: flex-start; flex-direction: column; }
+            .form-row { align-items: stretch; flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<section id="passcode-gate" class="passcode-gate" aria-labelledby="passcode-title">
+    <div class="passcode-card">
+        <h2 id="passcode-title">Checking site access...</h2>
+        <p class="muted">Checking the shared arcade passcode setting.</p>
+        <form id="passcode-form" hidden>
+            <label for="passcode-input">Enter passcode</label>
+            <input id="passcode-input" type="password" autocomplete="current-password" required>
+            <button type="submit">Unlock games</button>
+        </form>
+        <p id="passcode-status" role="status" aria-live="polite">Connecting...</p>
+    </div>
+</section>
+<main class="page">
+    <header class="topbar">
+        <h1>Multiplayer Board Games</h1>
+        <div class="top-actions">
+            <a href="../index.html" target="_top">&larr; Back to Arcade Hub</a>
+            <button id="theme-toggle" class="secondary" type="button" aria-label="Change color theme">Theme: Emerald</button>
+        </div>
+    </header>
+    <p id="connection-status" role="status" aria-live="polite">Connecting to multiplayer games...</p>
+    <section id="lobby" class="lobby-grid">
+        <div class="panel">
+            <h2>Start a game</h2>
+            <div class="create-fields">
+                <label for="player-name">Your name
+                    <input id="player-name" maxlength="20" autocomplete="nickname" placeholder="Player" value="Player">
+                </label>
+                <label for="game-choice">Game
+                    <select id="game-choice">
+                        <option value="tic-tac-toe">Tic-Tac-Toe</option>
+                        <option value="chess">Chess</option>
+                    </select>
+                </label>
+                <label class="privacy-label"><input id="private-room" type="checkbox"> Private room (invite link/code only)</label>
+                <button id="create-button" type="button" disabled>Create a room</button>
+                <form id="join-form">
+                    <label for="room-input">Join with a room code</label>
+                    <div class="form-row">
+                        <input id="room-input" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="6-character code" required>
+                        <button id="join-button" class="secondary" type="submit" disabled>Join</button>
+                    </div>
+                </form>
+            </div>
+            <p id="room-status" class="status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="panel">
+            <h2>Open rooms <span id="room-count" class="muted"></span></h2>
+            <p class="muted">Join a public room that is waiting for another player. Private rooms are never listed.</p>
+            <div id="room-list" class="room-list"><p class="empty-list">Loading public rooms...</p></div>
+        </div>
+    </section>
+    <section id="room" class="panel" hidden>
+        <div class="room-top">
+            <div>
+                <h2><span id="room-game-title">Game</span> · Room <span id="room-code"></span></h2>
+                <p id="players" class="players"></p>
+                <p id="share-link" class="muted"></p>
+            </div>
+            <button id="copy-link" class="secondary" type="button">Copy invite link</button>
+        </div>
+        <div class="room-layout">
+            <section class="game-panel" aria-label="Game board">
+                <p id="game-status" role="status" aria-live="polite">Waiting for another player...</p>
+                <div id="tic-board" role="group" aria-label="Tic-Tac-Toe board"></div>
+                <div id="chess-area" class="chess-area" hidden>
+                    <div id="rank-labels" class="rank-labels" aria-hidden="true"></div>
+                    <div id="chess-board" class="chess-board" role="group" aria-label="Chess board"></div>
+                    <div id="file-labels" class="file-labels" aria-hidden="true"></div>
+                </div>
+                <div id="chess-moves" aria-label="Move history" hidden></div>
+                <div id="chess-tools" class="chess-tools" hidden>
+                    <label for="promotion-choice">Pawn promotion</label>
+                    <select id="promotion-choice" aria-label="Pawn promotion piece">
+                        <option value="q">Queen</option><option value="r">Rook</option><option value="b">Bishop</option><option value="n">Knight</option>
+                    </select>
+                </div>
+                <div class="actions">
+                    <button id="new-game" class="secondary" type="button">New game</button>
+                    <button id="leave-room" class="secondary" type="button">Leave room</button>
+                </div>
+            </section>
+            <aside class="chat-panel" aria-label="Room chat">
+                <h3>Room chat</h3>
+                <ol id="chat-messages" aria-live="polite" aria-relevant="additions"><li class="muted">Chat is ready when you join the room.</li></ol>
+                <form id="chat-form" class="chat-form">
+                    <input id="chat-input" maxlength="300" autocomplete="off" placeholder="Message your opponent" aria-label="Chat message" required disabled>
+                    <button id="chat-send" type="submit" disabled>Send</button>
+                </form>
+                <p id="chat-status" class="status" role="status" aria-live="polite"></p>
+            </aside>
+        </div>
+    </section>
+</main>
+<script src="../../chat/chat-config.js"></script>
+<script type="module">
+
+    import { hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "../../scripts/site-passcode.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { browserSessionPersistence, getAuth, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+    const $ = (id) => document.getElementById(id);
+    const connectionStatus = $("connection-status");
+    const lobby = $("lobby");
+    const roomPanel = $("room");
+    const roomStatus = $("room-status");
+    const playerName = $("player-name");
+    const roomInput = $("room-input");
+    const ticBoard = $("tic-board");
+    const chessBoard = $("chess-board");
+    const chessArea = $("chess-area");
+    const cells = [];
+    let database;
+    let currentUid = null;
+    let Chess = null;
+    let activeRoomCode = null;
+    let activeRoomRef = null;
+    let stopRoomListener = null;
+    let stopChatListener = null;
+    let stopPublicRoomListener = null;
+    let currentRoom = null;
+    let movePending = false;
+    let selectedSquare = null;
+    let legalTargets = [];
+    let sharedPasscodeGate = null;
+    let currentUidInitialized = false;
+    let autoJoinedRoomCode = null;
+    let classroomTabChannel = null;
+    const passcodeSessionKey = SITE_PASSCODE_SESSION_KEY;
+    const passcodeGate = $("passcode-gate");
+    const passcodeForm = $("passcode-form");
+    const passcodeInput = $("passcode-input");
+    const passcodeStatus = $("passcode-status");
+
+    async function loadChessEngine() {
+        if (Chess) return Chess;
+        try {
+            const chessModule = await import("https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm");
+            if (typeof chessModule.Chess !== "function") throw new Error("The chess.js module did not export Chess.");
+            Chess = chessModule.Chess;
+            return Chess;
+        } catch (error) {
+            console.error("Chess rules library could not be loaded", error);
+            throw new Error("Chess could not load. Check your connection, then try again.");
+        }
+    }
+
+    function safeStorageGet(key) {
+        try { return localStorage.getItem(key); } catch (error) {
+            console.warn("Appearance preference could not be read", error);
+            return null;
+        }
+    }
+
+    function applyTheme(theme) {
+        const validThemes = ["emerald", "ocean", "ember", "custom"];
+        const selectedTheme = validThemes.includes(theme) ? theme : "emerald";
+        document.body.dataset.theme = selectedTheme;
+        if (selectedTheme === "custom") {
+            try {
+                const colors = JSON.parse(safeStorageGet("arcade-custom-theme") || "{}");
+                const validColor = (value) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+                if (validColor(colors.primary)) document.body.style.setProperty("--custom-accent", colors.primary);
+                if (validColor(colors.background)) document.body.style.setProperty("--custom-bg", colors.background);
+                if (validColor(colors.card)) document.body.style.setProperty("--custom-card", colors.card);
+                if (validColor(colors.text)) document.body.style.setProperty("--custom-text", colors.text);
+            } catch (error) {
+                console.warn("Custom appearance could not be read", error);
+            }
+        }
+        $("theme-toggle").textContent = `Theme: ${selectedTheme.charAt(0).toUpperCase()}${selectedTheme.slice(1)}`;
+        $("theme-toggle").setAttribute("aria-label", `Change color theme. Current theme: ${selectedTheme}`);
+    }
+
+    function initialTheme() {
+        const localTheme = safeStorageGet("arcade-theme");
+        if (localTheme) return localTheme;
+        try {
+            if (window.parent !== window) {
+                return window.parent.document.body.dataset.globalTheme || window.parent.document.body.dataset.theme || "emerald";
+            }
+        } catch (error) {
+            console.warn("Arcade theme could not be read from the parent page", error);
+        }
+        return "emerald";
+    }
+
+    function applyAccent(accent) {
+        const allowed = ["mint", "blue", "coral", "gold", "aqua"];
+        if (allowed.includes(accent)) document.body.dataset.accent = accent;
+    }
+
+    applyTheme(initialTheme());
+    $("theme-toggle").addEventListener("click", () => {
+        const themes = ["emerald", "ocean", "ember", "custom"];
+        const current = document.body.dataset.theme;
+        const next = themes[(themes.indexOf(current) + 1) % themes.length];
+        document.body.removeAttribute("data-global-theme");
+        applyTheme(next);
+        try { localStorage.setItem("arcade-theme", next); } catch (error) {
+            console.warn("Theme preference could not be saved", error);
+        }
+    });
+
+    function setLobbyStatus(message, isError = false) {
+        roomStatus.textContent = message;
+        roomStatus.classList.toggle("error", isError);
+    }
+
+    function playerSide(roomData) {
+        if (roomData.players.x === currentUid) return "x";
+        if (roomData.players.o === currentUid) return "o";
+        return null;
+    }
+
+    function gameLabel(game) {
+        return game === "chess" ? "Chess" : "Tic-Tac-Toe";
+    }
+
+    function updatePublicRoom(roomCode, roomData) {
+        const listingRef = ref(database, `classroomPublicRooms/${roomCode}`);
+        if (roomData.status !== "waiting" || roomData.isPrivate === true) return remove(listingRef);
+        return set(listingRef, {
+            game: roomData.game || "tic-tac-toe",
+            hostName: roomData.names && roomData.names.x ? roomData.names.x : "Player",
+            createdAt: roomData.createdAt
+        });
+    }
+
+    function renderPublicRooms(rooms) {
+        const roomList = $("room-list");
+        const entries = Object.entries(rooms || {}).filter(([code, item]) =>
+            /^[A-HJ-NP-Z2-9]{6}$/.test(code)
+            && item
+            && ["tic-tac-toe", "chess"].includes(item.game)
+            && typeof item.hostName === "string"
+            && typeof item.createdAt === "number"
+        );
+        $("room-count").textContent = entries.length ? `(${entries.length})` : "";
+        roomList.replaceChildren();
+        if (!entries.length) {
+            const empty = document.createElement("p");
+            empty.className = "empty-list";
+            empty.textContent = "No public rooms are waiting. Create one to get started.";
+            roomList.appendChild(empty);
+            return;
+        }
+        entries.sort((a, b) => b[1].createdAt - a[1].createdAt).forEach(([code, room]) => {
+            const card = document.createElement("article");
+            card.className = "room-card";
+            const details = document.createElement("div");
+            const title = document.createElement("strong");
+            title.textContent = `${gameLabel(room.game)} · ${room.hostName}`;
+            const meta = document.createElement("p");
+            meta.textContent = `Room ${code}`;
+            details.append(title, meta);
+            const join = document.createElement("button");
+            join.type = "button";
+            join.textContent = "Join room";
+            join.disabled = !currentUid;
+            join.addEventListener("click", () => joinRoom(code));
+            card.append(details, join);
+            roomList.appendChild(card);
+        });
+    }
+
+    function clearChat() {
+        if (stopChatListener) stopChatListener();
+        stopChatListener = null;
+        const empty = document.createElement("li");
+        empty.className = "muted";
+        empty.textContent = "No messages yet. Say hello!";
+        $("chat-messages").replaceChildren(empty);
+        $("chat-input").disabled = true;
+        $("chat-send").disabled = true;
+    }
+
+    function addChatMessage(message) {
+        if (!message || typeof message.text !== "string" || typeof message.name !== "string") return;
+        const item = document.createElement("li");
+        item.className = "chat-message";
+        const author = document.createElement("strong");
+        author.textContent = message.name;
+        const text = document.createElement("p");
+        text.textContent = message.text;
+        item.append(author, text);
+        const list = $("chat-messages");
+        if (list.children.length === 1 && list.firstElementChild.classList.contains("muted")) list.replaceChildren();
+        list.appendChild(item);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function startRoomChat(code) {
+        clearChat();
+        const chatQuery = query(ref(database, `classroomRoomChats/${code}`), limitToLast(50));
+        stopChatListener = onChildAdded(chatQuery, (snapshot) => addChatMessage(snapshot.val()), (error) => {
+            console.error("Multiplayer room chat could not be loaded", error);
+            $("chat-status").textContent = "Chat could not load. Check the Firebase room chat rules.";
+        });
+        $("chat-input").disabled = false;
+        $("chat-send").disabled = false;
+    }
+
+    function renderTicTacToe(roomData, side) {
+        chessArea.hidden = true;
+        $("chess-tools").hidden = true;
+        $("chess-moves").hidden = true;
+        ticBoard.hidden = false;
+        $("game-status").textContent = roomData.status === "waiting"
+            ? "Waiting for another player to join..."
+            : roomData.status === "draw"
+                ? "It's a draw!"
+                : roomData.status === "won"
+                    ? `${roomData.winner.toUpperCase()} wins!`
+                    : roomData.turn === side
+                        ? `Your turn (${side.toUpperCase()})`
+                        : `Waiting for ${roomData.turn.toUpperCase()} to play...`;
+        roomData.board.forEach((mark, index) => {
+            const cell = cells[index];
+            cell.textContent = mark ? mark.toUpperCase() : "";
+            cell.dataset.mark = mark || "";
+            cell.setAttribute("aria-label", `Square ${index + 1}, ${mark ? mark.toUpperCase() : "empty"}`);
+            cell.disabled = !side || roomData.status !== "playing" || roomData.turn !== side || Boolean(mark) || movePending;
+        });
+    }
+
+    function renderChess(roomData, side) {
+        ticBoard.hidden = true;
+        chessArea.hidden = false;
+        $("chess-tools").hidden = false;
+        let chess;
+        try {
+            chess = new Chess();
+            if (roomData.pgn) chess.loadPgn(roomData.pgn);
+            else if (roomData.fen) chess.load(roomData.fen);
+        } catch (error) {
+            console.error("Chess room position is invalid", error);
+            $("game-status").textContent = "This room has an invalid chess position.";
+            return;
+        }
+        if (roomData.status === "won") {
+            $("game-status").textContent = `${roomData.winner === "x" ? "White" : "Black"} wins by checkmate.`;
+        } else if (roomData.status === "draw") {
+            $("game-status").textContent = "The game is drawn.";
+        } else if (roomData.status === "waiting") {
+            $("game-status").textContent = "Waiting for another player to join...";
+        } else {
+            const turn = chess.turn() === "w" ? "White" : "Black";
+            $("game-status").textContent = `${side === (chess.turn() === "w" ? "x" : "o") ? "Your turn" : `${turn} to move`}${chess.isCheck() ? " · Check!" : ""}`;
+        }
+        const files = "abcdefgh";
+        const boardRows = chess.board();
+        const rows = side === "o" ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
+        const columns = side === "o" ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
+        const symbols = { wk: "♔", wq: "♕", wr: "♖", wb: "♗", wn: "♘", wp: "♙", bk: "♚", bq: "♛", br: "♜", bb: "♝", bn: "♞", bp: "♟" };
+        const lastMove = chess.history({ verbose: true }).at(-1);
+        const history = chess.history();
+        const moves = $("chess-moves");
+        moves.hidden = false;
+        moves.textContent = history.reduce((notation, san, index) =>
+            notation + (index % 2 === 0 ? `${Math.floor(index / 2) + 1}. ` : " ") + san + (index % 2 === 1 ? "   " : ""), "");
+        chessBoard.replaceChildren();
+        rows.forEach((rank) => columns.forEach((fileIndex) => {
+            const squareName = `${files[fileIndex]}${8 - rank}`;
+            const piece = boardRows[rank][fileIndex];
+            const square = document.createElement("button");
+            square.type = "button";
+            square.className = `chess-square ${(rank + fileIndex) % 2 ? "dark" : "light"}`;
+            if (selectedSquare === squareName) square.classList.add("selected");
+            if (legalTargets.some((move) => move.to === squareName)) {
+                square.classList.add(piece ? "capture" : "legal");
+            }
+            if (lastMove && (lastMove.from === squareName || lastMove.to === squareName)) square.classList.add("last-move");
+            square.textContent = piece ? symbols[`${piece.color}${piece.type}`] : "";
+            square.setAttribute("aria-label", `${squareName}${piece ? `, ${piece.color === "w" ? "white" : "black"} ${piece.type}` : ""}`);
+            square.disabled = !side || roomData.status !== "playing" || chess.turn() !== (side === "x" ? "w" : "b") || movePending;
+            square.addEventListener("click", () => clickChessSquare(squareName, chess));
+            chessBoard.appendChild(square);
+        }));
+        const rankLabels = $("rank-labels");
+        rankLabels.replaceChildren();
+        rows.forEach((rank) => {
+            const label = document.createElement("span");
+            label.textContent = String(8 - rank);
+            rankLabels.appendChild(label);
+        });
+        const fileLabels = $("file-labels");
+        fileLabels.replaceChildren();
+        columns.forEach((fileIndex) => {
+            const label = document.createElement("span");
+            label.textContent = files[fileIndex];
+            fileLabels.appendChild(label);
+        });
+    }
+
+    function renderRoom(roomData) {
+        currentRoom = roomData;
+        const side = playerSide(roomData);
+        const labels = roomData.game === "chess" ? { x: "White", o: "Black" } : { x: "X", o: "O" };
+        $("room-game-title").textContent = gameLabel(roomData.game);
+        $("players").textContent = `${labels.x}: ${roomData.names.x || "Waiting"}  ·  ${labels.o}: ${roomData.names.o || "Waiting"}${roomData.isPrivate ? "  ·  Private" : ""}`;
+        if (roomData.game === "chess") renderChess(roomData, side);
+        else renderTicTacToe(roomData, side);
+    }
+
+    function showRoom(code, roomRef, roomData) {
+        if (stopRoomListener) stopRoomListener();
+        activeRoomCode = code;
+        activeRoomRef = roomRef;
+        selectedSquare = null;
+        legalTargets = [];
+        lobby.hidden = true;
+        roomPanel.hidden = false;
+        $("room-code").textContent = code;
+        const invite = new URL(window.location.href);
+        invite.searchParams.set("room", code);
+        $("share-link").textContent = invite.href;
+        history.replaceState(null, "", invite.href);
+        renderRoom(roomData);
+        startRoomChat(code);
+        stopRoomListener = onValue(roomRef, (snapshot) => {
+            if (!snapshot.exists()) {
+                leaveRoom("This room no longer exists.");
+                return;
+            }
+            const updatedRoom = snapshot.val();
+            renderRoom(updatedRoom);
+            updatePublicRoom(code, updatedRoom).catch((error) => {
+                console.error("Public room listing could not be updated", error);
+                $("room-status").textContent = "The room is open, but its public listing could not update. Check the Firebase rules.";
+                $("room-status").classList.add("error");
+            });
+        }, (error) => {
+            console.error("Multiplayer room listener failed", error);
+            $("game-status").textContent = "Room updates stopped. Check the Realtime Database rules and reload.";
+        });
+    }
+
+    function leaveRoom(message = "") {
+        if (stopRoomListener) stopRoomListener();
+        stopRoomListener = null;
+        clearChat();
+        activeRoomCode = null;
+        activeRoomRef = null;
+        currentRoom = null;
+        roomPanel.hidden = true;
+        lobby.hidden = false;
+        history.replaceState(null, "", window.location.pathname);
+        setLobbyStatus(message);
+    }
+
+    function setMultiplayerAccessAllowed(allowed) {
+        passcodeGate.hidden = allowed;
+        $("create-button").disabled = !allowed || !currentUid;
+        $("join-button").disabled = !allowed || !currentUid;
+        if (allowed && currentUid && stopPublicRoomListener === null) {
+            stopPublicRoomListener = onValue(ref(database, "classroomPublicRooms"), (snapshot) => {
+                renderPublicRooms(snapshot.val());
+            }, (error) => {
+                console.error("Public multiplayer rooms could not be loaded", error);
+                $("room-list").innerHTML = '<p class="empty-list">Public rooms could not load. Check the Firebase multiplayer room rules.</p>';
+                setLobbyStatus("Public room listing is unavailable. Check the current Firebase rules.", true);
+            });
+        }
+        if (!allowed) {
+            if (stopPublicRoomListener) stopPublicRoomListener();
+            stopPublicRoomListener = null;
+            return;
+        }
+        const roomCode = new URLSearchParams(window.location.search).get("room");
+        if (roomCode && /^[A-HJ-NP-Z2-9]{6}$/i.test(roomCode)) {
+            roomInput.value = roomCode.toUpperCase();
+            if (autoJoinedRoomCode !== roomCode.toUpperCase()) {
+                autoJoinedRoomCode = roomCode.toUpperCase();
+                joinRoom(autoJoinedRoomCode).catch((error) => {
+                    console.error("Multiplayer invite could not be joined", error);
+                    setLobbyStatus(error.message || "Could not join the invited room.", true);
+                });
+            }
+        }
+    }
+
+    function applySharedPasscodeGate(record) {
+        if (!record) {
+            sharedPasscodeGate = null;
+            passcodeGate.hidden = true;
+            setMultiplayerAccessAllowed(true);
+            return;
+        }
+        if (!isValidSitePasscode(record)) {
+            sharedPasscodeGate = null;
+            passcodeGate.hidden = false;
+            $("passcode-title").textContent = "Access settings unavailable";
+            passcodeStatus.textContent = "Contact the site admin to repair the passcode setting.";
+            passcodeForm.hidden = true;
+            setMultiplayerAccessAllowed(false);
+            return;
+        }
+        sharedPasscodeGate = record;
+        $("passcode-title").textContent = "Arcade passcode";
+        passcodeForm.hidden = false;
+        let unlocked = false;
+        try { unlocked = sessionStorage.getItem(passcodeSessionKey) === record.hash; } catch (error) {
+            console.warn("Passcode session could not be read", error);
+        }
+        passcodeStatus.textContent = unlocked ? "" : "Enter the shared passcode to continue.";
+        setMultiplayerAccessAllowed(unlocked);
+    }
+
+    passcodeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!sharedPasscodeGate) return;
+        const submitButton = passcodeForm.querySelector("button");
+        submitButton.disabled = true;
+        passcodeStatus.textContent = "Checking passcode...";
+        try {
+            const hash = await hashSitePasscode(passcodeInput.value, hexToBytes(sharedPasscodeGate.salt));
+            if (hash === sharedPasscodeGate.hash) {
+                try { sessionStorage.setItem(passcodeSessionKey, hash); } catch (error) {
+                    console.warn("Passcode session could not be saved", error);
+                }
+                passcodeInput.value = "";
+                passcodeStatus.textContent = "";
+                setMultiplayerAccessAllowed(true);
+            } else {
+                passcodeStatus.textContent = "That passcode did not match.";
+                passcodeInput.select();
+            }
+        } catch (error) {
+            console.error("Shared passcode could not be checked", error);
+            passcodeStatus.textContent = error.message || "Passcode could not be checked.";
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    function createCode() {
+        const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        return Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+    }
+
+    function newRoomData(game, name, isPrivate) {
+        return {
+            game,
+            isPrivate,
+            hostUid: currentUid,
+            players: { x: currentUid, o: null },
+            names: { x: name, o: null },
+            board: Array(9).fill(""),
+            fen: game === "chess" ? new Chess().fen() : null,
+            pgn: game === "chess" ? "" : null,
+            turn: "x",
+            status: "waiting",
+            winner: null,
+            createdAt: Date.now()
+        };
+    }
+
+    async function createRoom() {
+        const name = playerName.value.trim() || "Player";
+        const game = $("game-choice").value;
+        const isPrivate = $("private-room").checked;
+        if (game === "chess") await loadChessEngine();
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            const code = createCode();
+            const roomRef = ref(database, `classroomRooms/${code}`);
+            const result = await runTransaction(roomRef, (existing) => existing || newRoomData(game, name, isPrivate));
+            const roomData = result.snapshot.val();
+            if (result.committed && roomData && roomData.players.x === currentUid) {
+                showRoom(code, roomRef, roomData);
+                if (!isPrivate) {
+                    try { await updatePublicRoom(code, roomData); } catch (error) {
+                        console.error("Public room could not be listed", error);
+                        $("game-status").textContent = "Room created, but it could not be listed publicly. Publish the latest Firebase rules; you can still share its invite link.";
+                    }
+                }
+                return;
+            }
+        }
+        throw new Error("Could not reserve a room code. Please try again.");
+    }
+
+    async function joinRoom(code) {
+        const roomRef = ref(database, `classroomRooms/${code}`);
+        const snapshot = await get(roomRef);
+        if (!snapshot.exists()) throw new Error("That room was not found. Check the code and try again.");
+        const initialRoomData = snapshot.val();
+        if (initialRoomData.game === "chess") await loadChessEngine();
+        let usedInitialRoomData = false;
+        const transaction = await runTransaction(roomRef, (data) => {
+            if (!data && !usedInitialRoomData) {
+                data = initialRoomData;
+                usedInitialRoomData = true;
+            }
+            if (!data || !data.players) return;
+            if (data.players.x === currentUid || data.players.o === currentUid) return data;
+            if (data.status !== "waiting" || data.players.o) return;
+            return {
+                ...data,
+                game: data.game || "tic-tac-toe",
+                isPrivate: data.isPrivate === true,
+                hostUid: data.hostUid || data.players.x,
+                fen: data.fen || null,
+                players: { ...data.players, o: currentUid },
+                names: { ...data.names, o: playerName.value.trim() || "Player" },
+                status: "playing"
+            };
+        });
+        const roomData = transaction.snapshot.val() || (await get(roomRef)).val();
+        if (!roomData) throw new Error("That room could not be read. Check the code and try again.");
+        if (!roomData.players || !playerSide(roomData)) {
+            if (roomData.players && roomData.players.o) throw new Error("This room already has two players.");
+            if (roomData.status !== "waiting") throw new Error("This game has already started.");
+            throw new Error("Your player slot was not claimed. Check that the latest multiplayer room rules are published.");
+        }
+        showRoom(code, roomRef, roomData);
+        try {
+            await updatePublicRoom(code, {
+                ...roomData,
+                game: roomData.game || "tic-tac-toe",
+                isPrivate: roomData.isPrivate === true
+            });
+        } catch (error) {
+            console.error("Public room listing could not be refreshed", error);
+            $("game-status").textContent = "You joined, but the public room list could not update. Publish the latest Firebase rules.";
+        }
+    }
+
+    async function playTicMove(index) {
+        if (!activeRoomRef || !currentRoom || movePending) return;
+        movePending = true;
+        renderRoom(currentRoom);
+        try {
+            await runTransaction(activeRoomRef, (data) => {
+                if (!data || data.game === "chess" || data.status !== "playing" || data.board[index]) return;
+                const side = playerSide(data);
+                if (!side || data.turn !== side) return;
+                const board = data.board.slice();
+                board[index] = side;
+                const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+                const won = wins.some((line) => line.every((cell) => board[cell] === side));
+                const draw = !won && board.every(Boolean);
+                return { ...data, board, turn: side === "x" ? "o" : "x", status: won ? "won" : draw ? "draw" : "playing", winner: won ? side : null };
+            });
+        } catch (error) {
+            console.error("Tic-Tac-Toe move failed", error);
+            $("game-status").textContent = "Move failed. Check the Firebase multiplayer room rules.";
+        } finally {
+            movePending = false;
+            if (currentRoom) renderRoom(currentRoom);
+        }
+    }
+
+    function clickChessSquare(squareName, chess) {
+        if (!currentRoom || !activeRoomRef || movePending) return;
+        const side = playerSide(currentRoom);
+        if (!side || currentRoom.status !== "playing" || chess.turn() !== (side === "x" ? "w" : "b")) return;
+        if (selectedSquare && legalTargets.some((move) => move.to === squareName)) {
+            const move = legalTargets.find((candidate) => candidate.to === squareName);
+            playChessMove(selectedSquare, squareName, move.flags.includes("p") ? $("promotion-choice").value : undefined);
+            selectedSquare = null;
+            legalTargets = [];
+            return;
+        }
+        const piece = chess.get(squareName);
+        if (piece && piece.color === chess.turn()) {
+            selectedSquare = squareName;
+            legalTargets = chess.moves({ square: squareName, verbose: true });
+        } else {
+            selectedSquare = null;
+            legalTargets = [];
+        }
+        renderRoom(currentRoom);
+    }
+
+    async function playChessMove(from, to, promotion) {
+        movePending = true;
+        renderRoom(currentRoom);
+        try {
+            const result = await runTransaction(activeRoomRef, (data) => {
+                if (!data || data.game !== "chess" || data.status !== "playing") return;
+                const side = playerSide(data);
+                if (!side || data.turn !== side) return;
+                let chess;
+                try {
+                    chess = new Chess();
+                    if (data.pgn) chess.loadPgn(data.pgn);
+                    else chess.load(data.fen);
+                } catch { return; }
+                let move;
+                try { move = chess.move({ from, to, ...(promotion ? { promotion } : {}) }); } catch { return; }
+                if (!move) return;
+                const checkmate = chess.isCheckmate();
+                const draw = !checkmate && chess.isDraw();
+                return {
+                    ...data,
+                    fen: chess.fen(),
+                    pgn: chess.pgn(),
+                    turn: chess.turn() === "w" ? "x" : "o",
+                    status: checkmate ? "won" : draw ? "draw" : "playing",
+                    winner: checkmate ? side : null
+                };
+            });
+            if (!result.committed) $("game-status").textContent = "That chess move is no longer legal.";
+        } catch (error) {
+            console.error("Chess move failed", error);
+            $("game-status").textContent = "Move failed. Check the Firebase multiplayer room rules.";
+        } finally {
+            movePending = false;
+            if (currentRoom) renderRoom(currentRoom);
+        }
+    }
+
+    for (let index = 0; index < 9; index += 1) {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "tic-cell secondary";
+        cell.addEventListener("click", () => playTicMove(index));
+        ticBoard.appendChild(cell);
+        cells.push(cell);
+    }
+
+    $("create-button").addEventListener("click", async () => {
+        setLobbyStatus("Creating room...");
+        $("create-button").disabled = true;
+        try { await createRoom(); } catch (error) {
+            console.error("Multiplayer room creation failed", error);
+            setLobbyStatus(error.message || "Could not create a room.", true);
+        } finally { $("create-button").disabled = !currentUid || passcodeGate.hidden === false; }
+    });
+
+    $("join-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const code = roomInput.value.trim().toUpperCase();
+        if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
+            setLobbyStatus("Enter a valid six-character room code.", true);
+            return;
+        }
+        setLobbyStatus("Joining room...");
+        try { await joinRoom(code); } catch (error) {
+            console.error("Multiplayer room join failed", error);
+            setLobbyStatus(error.message || "Could not join the room.", true);
+        }
+    });
+
+    $("chat-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const text = $("chat-input").value.trim();
+        if (!text || !activeRoomCode || !currentUid) return;
+        $("chat-send").disabled = true;
+        try {
+            await set(push(ref(database, `classroomRoomChats/${activeRoomCode}`)), {
+                uid: currentUid,
+                name: (playerName.value.trim() || "Player").slice(0, 20),
+                text: text.slice(0, 300),
+                createdAt: serverTimestamp()
+            });
+            $("chat-input").value = "";
+            $("chat-status").textContent = "";
+        } catch (error) {
+            console.error("Multiplayer room chat message failed", error);
+            $("chat-status").textContent = "Message could not be sent. Check the Firebase multiplayer chat rules.";
+        } finally { $("chat-send").disabled = false; }
+    });
+
+    $("copy-link").addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText($("share-link").textContent);
+            $("copy-link").textContent = "Invite link copied";
+            setTimeout(() => { $("copy-link").textContent = "Copy invite link"; }, 1800);
+        } catch (error) {
+            console.error("Multiplayer invite could not be copied", error);
+            $("game-status").textContent = "Copy failed. Select and copy the invite link shown above.";
+        }
+    });
+
+    $("new-game").addEventListener("click", async () => {
+        if (!activeRoomRef || !currentRoom) return;
+        try {
+            if (currentRoom.game === "chess") await loadChessEngine();
+            await runTransaction(activeRoomRef, (data) => {
+                if (!data || !playerSide(data)) return;
+                return {
+                    ...data,
+                    board: Array(9).fill(""),
+                    fen: data.game === "chess" ? new Chess().fen() : null,
+                    pgn: data.game === "chess" ? "" : null,
+                    turn: "x",
+                    status: data.players.o ? "playing" : "waiting",
+                    winner: null
+                };
+            });
+            selectedSquare = null;
+            legalTargets = [];
+        } catch (error) {
+            console.error("Multiplayer game reset failed", error);
+            $("game-status").textContent = "Could not start a new game. Check the Firebase rules.";
+        }
+    });
+
+    $("leave-room").addEventListener("click", () => leaveRoom());
+
+    function createClassroomTabId() {
+        return globalThis.crypto && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    async function getClassroomTabId() {
+        let tabId;
+        try {
+            tabId = sessionStorage.getItem("classroom-tab-id");
+            if (!tabId) {
+                tabId = createClassroomTabId();
+                sessionStorage.setItem("classroom-tab-id", tabId);
+            }
+        } catch (error) {
+            console.warn("Multiplayer tab identity could not be saved", error);
+            return createClassroomTabId();
+        }
+        if (typeof BroadcastChannel !== "function") return tabId;
+        while (true) {
+            const instanceId = createClassroomTabId();
+            let channel;
+            try { channel = new BroadcastChannel(`classroom-tab-${tabId}`); } catch (error) {
+                console.warn("Multiplayer tabs could not be checked for duplicate identities", error);
+                return tabId;
+            }
+            let alreadyInUse = false;
+            channel.addEventListener("message", (event) => {
+                const message = event.data;
+                if (!message || message.instanceId === instanceId) return;
+                if (message.type === "claim") channel.postMessage({ type: "occupied", instanceId, target: message.instanceId });
+                else if (message.type === "occupied" && message.target === instanceId) alreadyInUse = true;
+            });
+            channel.postMessage({ type: "claim", instanceId });
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            if (!alreadyInUse) {
+                classroomTabChannel = channel;
+                return tabId;
+            }
+            channel.close();
+            tabId = createClassroomTabId();
+            try { sessionStorage.setItem("classroom-tab-id", tabId); } catch (error) {
+                console.warn("A unique Multiplayer tab identity could not be saved", error);
+                return tabId;
+            }
+        }
+    }
+
+    async function connectMultiplayer() {
+        const config = window.CHAT_FIREBASE_CONFIG;
+        if (!config || !["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => config[key])) {
+            connectionStatus.textContent = "Multiplayer games are not configured. See the Firebase setup guide.";
+            passcodeGate.hidden = true;
+            return;
+        }
+        const tabId = await getClassroomTabId();
+        let auth;
+        try {
+            const app = initializeApp(config, `multiplayer-${tabId}`);
+            auth = getAuth(app);
+            database = getDatabase(app);
+        } catch (error) {
+            console.error("Multiplayer Firebase initialization failed", error);
+            connectionStatus.textContent = "Could not connect to multiplayer games. Check the Firebase configuration.";
+            $("passcode-title").textContent = "Could not check site access";
+            passcodeStatus.textContent = "Reload the page or contact the site admin.";
+            passcodeForm.hidden = true;
+            return;
+        }
+        setPersistence(auth, browserSessionPersistence).then(() => signInAnonymously(auth)).then(({ user }) => {
+            currentUid = user.uid;
+            connectionStatus.textContent = "Connected · rooms sync across devices";
+            if (currentUidInitialized) return;
+            currentUidInitialized = true;
+            onValue(ref(database, "siteControl"), (snapshot) => {
+                const settings = snapshot.val() || {};
+                applyGlobalThemeAccent(settings);
+                applySharedPasscodeGate(settings.accessGate || null);
+            }, (error) => {
+                console.error("Shared passcode setting could not be loaded", error);
+                $("passcode-title").textContent = "Could not check site access";
+                passcodeStatus.textContent = "Reload the page or contact the site admin.";
+                passcodeForm.hidden = true;
+                passcodeGate.hidden = false;
+                setMultiplayerAccessAllowed(false);
+            });
+        }).catch((error) => {
+            console.error("Multiplayer Firebase authentication failed", error);
+            connectionStatus.textContent = "Could not connect to Firebase Authentication.";
+            $("passcode-title").textContent = "Could not check site access";
+            passcodeStatus.textContent = "Reload the page or contact the site admin.";
+            passcodeForm.hidden = true;
+        });
+    }
+
+    function applyGlobalThemeAccent(settings) {
+        const defaults = settings && settings.defaults && typeof settings.defaults === "object" ? settings.defaults : {};
+        const globalTheme = ["emerald", "ocean", "ember"].includes(settings.theme) ? settings.theme : null;
+        const defaultTheme = ["emerald", "ocean", "ember"].includes(defaults.theme) ? defaults.theme : null;
+        if (globalTheme) {
+            applyTheme(globalTheme);
+            document.body.dataset.globalTheme = globalTheme;
+        } else {
+            document.body.removeAttribute("data-global-theme");
+            if (!safeStorageGet("arcade-theme") && defaultTheme) applyTheme(defaultTheme);
+        }
+        const accent = settings.accent || defaults.accent;
+        if (accent && accent !== "theme") applyAccent(accent);
+        else document.body.removeAttribute("data-accent");
+    }
+
+    connectMultiplayer();
+</script>
+</body>
+</html>

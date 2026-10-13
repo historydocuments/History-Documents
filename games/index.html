@@ -669,7 +669,7 @@
 
     <script src="games-list.js"></script>
     <script>
-        const BUILD_VERSION = "2026.10.09.3";
+        const BUILD_VERSION = "2026.10.13.1";
         let allGames = [];
         const hosts = [
             { id: 'link-netlify', url: 'https://app.netlify.com/drop/' },
@@ -848,12 +848,17 @@
             setTimeout(() => loader.style.display = 'none', 500);
         }
 
+        function getGameTitle(folder) {
+            if (folder === 'multiplayer-board-games') return 'Multiplayer Board Games';
+            return folder.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        }
+
         function renderGames(games) {
             const container = document.getElementById('game-list');
             container.innerHTML = '';
             document.getElementById('game-count').textContent = `${games.length} ${games.length === 1 ? 'game' : 'games'}`;
             games.forEach(folder => {
-                const cleanName = folder.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                const cleanName = getGameTitle(folder);
                 const card = document.createElement('a');
                 card.href = `${folder}/index.html`;
                 card.className = 'game-card';
@@ -890,7 +895,7 @@
             try {
                 const folder = decodeURIComponent(match[1]);
                 if (!allGames.includes(folder)) throw new Error('Unknown game route');
-                const title = folder.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                const title = getGameTitle(folder);
                 const game = { folder, title };
                 const baseUrl = `${window.location.pathname}${window.location.search}`;
                 history.replaceState(null, '', baseUrl);
@@ -971,7 +976,7 @@
         function playRandom() {
             if (allGames.length > 0) {
                 const randomFolder = allGames[Math.floor(Math.random() * allGames.length)];
-                const cleanName = randomFolder.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                const cleanName = getGameTitle(randomFolder);
                 openGame(randomFolder, cleanName);
             }
         }
@@ -1431,7 +1436,7 @@
             const forcedGameToken = forcedGame && typeof forcedGame.token === "string" ? forcedGame.token : null;
             if (hasReadSiteControls && forcedGameToken && forcedGameToken !== lastForcedGameToken &&
                 Array.isArray(window.GAMES) && window.GAMES.includes(forcedGame.folder)) {
-                const title = forcedGame.folder.split(/[-_]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+                const title = getGameTitle(forcedGame.folder);
                 if (typeof window.openGame === "function") {
                     window.openGame(forcedGame.folder, title);
                 } else {
@@ -1474,7 +1479,7 @@
             window.GAMES.forEach((folder) => {
                 const option = document.createElement("option");
                 option.value = folder;
-                option.textContent = folder.split(/[-_]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+                option.textContent = getGameTitle(folder);
                 forceGameSelect.append(option);
             });
         }

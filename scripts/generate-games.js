@@ -4,6 +4,7 @@ const path = require('node:path');
 const gamesDirectory = path.join(__dirname, '..', 'games');
 const gameFolders = fs.readdirSync(gamesDirectory, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.name !== 'tictactoe-test')
     .filter((entry) => fs.existsSync(path.join(gamesDirectory, entry.name, 'index.html')))
     .map((entry) => entry.name)
     .sort((first, second) => first.localeCompare(second));
