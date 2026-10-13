@@ -79,8 +79,9 @@
         .tic-cell[data-mark="o"] { color: #58d3e5; }
         .chess-area { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; width: min(100%, 540px); margin: 0 auto 12px; }
         .rank-labels { display: grid; grid-template-rows: repeat(8, 1fr); align-items: center; color: var(--muted); font-size: .72rem; }
-        .chess-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); aspect-ratio: 1; overflow: hidden; border-radius: 5px; }
-        .chess-square { position: relative; display: grid; place-items: center; min-height: 0; padding: 0; border: 0; border-radius: 0; color: #17201a; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(1.45rem, 5.4vw, 3.5rem); line-height: 1; }
+        .chess-board { display: grid; width: 100%; min-width: 0; min-height: 0; aspect-ratio: 1; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); overflow: hidden; border-radius: 5px; }
+        .chess-square { position: relative; display: grid; width: 100%; height: 100%; min-width: 0; min-height: 0; aspect-ratio: 1; place-items: center; padding: 0; border: 0; border-radius: 0; line-height: 1; }
+        .chess-piece { display: block; width: 82%; height: 82%; overflow: visible; pointer-events: none; filter: drop-shadow(0 1px 1px #0005); }
         .chess-square.light { background: var(--board-light); }
         .chess-square.dark { background: var(--board-dark); }
         .chess-square.selected { box-shadow: inset 0 0 0 4px var(--accent); }
@@ -220,7 +221,7 @@
 <script src="../../chat/chat-config.js"></script>
 <script type="module">
 
-    import { hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "../../scripts/site-passcode.js";
+    import { hashSitePasscode, hexToBytes, isValidSitePasscode, readSavedSitePasscodeHash, saveSitePasscodeHash } from "../../scripts/site-passcode.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
     import { browserSessionPersistence, getAuth, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
     import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
@@ -252,7 +253,6 @@
     let currentUidInitialized = false;
     let autoJoinedRoomCode = null;
     let classroomTabChannel = null;
-    const passcodeSessionKey = SITE_PASSCODE_SESSION_KEY;
     const passcodeGate = $("passcode-gate");
     const passcodeForm = $("passcode-form");
     const passcodeInput = $("passcode-input");
@@ -461,6 +461,22 @@
         });
     }
 
+    function makeChessPieceIcon(piece) {
+        const isWhite = piece.color === "w";
+        const fill = isWhite ? "#f8f6ef" : "#29332f";
+        const stroke = isWhite ? "#37433d" : "#e7e9df";
+        const shapes = {
+            k: '<path d="M46 9h8v9h9v8h-9v8h-8v-8h-9v-8h9z"/><path d="M33 40c-7-8-2-13 5-11 3 1 6 4 8 8 3-4 6-7 10-8 8-2 12 4 5 12l-4 7 8 25H35l8-25z"/>',
+            q: '<circle cx="24" cy="24" r="6"/><circle cx="50" cy="16" r="6"/><circle cx="76" cy="24" r="6"/><circle cx="35" cy="31" r="5"/><circle cx="65" cy="31" r="5"/><path d="m23 32 9 5 7-12 11 14 11-14 7 12 9-5-8 39H31z"/>',
+            r: '<path d="M25 18h12v12h8V18h12v12h8V18h12v24l-8 7 5 24H34l5-24-8-7z"/>',
+            b: '<path d="M50 12c-17 12-20 22-8 35l-9 26h34l-9-26c12-13 9-23-8-35z"/><path d="m39 36 22 18M34 73h32"/>',
+            n: '<path d="M30 75c4-13 1-19-7-28 4-3 9-5 15-5-2-9 2-19 13-29 2 8 7 11 15 13 9 3 14 10 12 20l-4 29z"/><circle cx="62" cy="39" r="2.5" fill="' + stroke + '" stroke="none"/>',
+            p: '<circle cx="50" cy="27" r="13"/><path d="M42 41c-1 11-9 17-12 31h40c-3-14-11-20-12-31z"/>'
+        };
+        const base = '<path d="M29 76h42l7 8H22zM25 86h50v7H25z"/>';
+        return `<svg class="chess-piece" viewBox="0 0 100 100" aria-hidden="true" focusable="false" fill="${fill}" stroke="${stroke}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">${shapes[piece.type]}${base}</svg>`;
+    }
+
     function renderChess(roomData, side) {
         ticBoard.hidden = true;
         chessArea.hidden = false;
@@ -489,7 +505,6 @@
         const boardRows = chess.board();
         const rows = side === "o" ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
         const columns = side === "o" ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
-        const symbols = { wk: "♔", wq: "♕", wr: "♖", wb: "♗", wn: "♘", wp: "♙", bk: "♚", bq: "♛", br: "♜", bb: "♝", bn: "♞", bp: "♟" };
         const lastMove = chess.history({ verbose: true }).at(-1);
         const history = chess.history();
         const moves = $("chess-moves");
@@ -508,7 +523,7 @@
                 square.classList.add(piece ? "capture" : "legal");
             }
             if (lastMove && (lastMove.from === squareName || lastMove.to === squareName)) square.classList.add("last-move");
-            square.textContent = piece ? symbols[`${piece.color}${piece.type}`] : "";
+            if (piece) square.innerHTML = makeChessPieceIcon(piece);
             square.setAttribute("aria-label", `${squareName}${piece ? `, ${piece.color === "w" ? "white" : "black"} ${piece.type}` : ""}`);
             square.disabled = !side || roomData.status !== "playing" || chess.turn() !== (side === "x" ? "w" : "b") || movePending;
             square.addEventListener("click", () => clickChessSquare(squareName, chess));
@@ -639,9 +654,7 @@
         $("passcode-title").textContent = "Arcade passcode";
         passcodeForm.hidden = false;
         let unlocked = false;
-        try { unlocked = sessionStorage.getItem(passcodeSessionKey) === record.hash; } catch (error) {
-            console.warn("Passcode session could not be read", error);
-        }
+        unlocked = readSavedSitePasscodeHash() === record.hash;
         passcodeStatus.textContent = unlocked ? "" : "Enter the shared passcode to continue.";
         setMultiplayerAccessAllowed(unlocked);
     }
@@ -655,11 +668,9 @@
         try {
             const hash = await hashSitePasscode(passcodeInput.value, hexToBytes(sharedPasscodeGate.salt));
             if (hash === sharedPasscodeGate.hash) {
-                try { sessionStorage.setItem(passcodeSessionKey, hash); } catch (error) {
-                    console.warn("Passcode session could not be saved", error);
-                }
+                const saved = saveSitePasscodeHash(hash);
                 passcodeInput.value = "";
-                passcodeStatus.textContent = "";
+                passcodeStatus.textContent = saved ? "" : "Passcode accepted, but this browser could not save it.";
                 setMultiplayerAccessAllowed(true);
             } else {
                 passcodeStatus.textContent = "That passcode did not match.";

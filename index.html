@@ -68,7 +68,7 @@
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
     import { get, getDatabase, ref } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
-    import { hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "./scripts/site-passcode.js";
+    import { hashSitePasscode, hexToBytes, isValidSitePasscode, readSavedSitePasscodeHash, saveSitePasscodeHash } from "./scripts/site-passcode.js";
 
     const gate = document.getElementById("site-passcode-gate");
     const title = document.getElementById("site-passcode-title");
@@ -112,7 +112,7 @@
                 showAccessError("The saved passcode setting is invalid. Contact the site admin.");
                 return;
             }
-            if (sessionStorage.getItem(SITE_PASSCODE_SESSION_KEY) === passcodeRecord.hash) {
+            if (readSavedSitePasscodeHash() === passcodeRecord.hash) {
                 gate.hidden = true;
                 return;
             }
@@ -135,8 +135,9 @@
         try {
             const hash = await hashSitePasscode(input.value, hexToBytes(passcodeRecord.salt));
             if (hash === passcodeRecord.hash) {
-                sessionStorage.setItem(SITE_PASSCODE_SESSION_KEY, hash);
+                const saved = saveSitePasscodeHash(hash);
                 input.value = "";
+                status.textContent = saved ? "" : "Passcode accepted, but this browser could not save it.";
                 gate.hidden = true;
             } else {
                 status.textContent = "That passcode did not match.";

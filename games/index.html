@@ -849,7 +849,7 @@
         }
 
         function getGameTitle(folder) {
-            if (folder === 'multiplayer-board-games') return 'Multiplayer Board Games';
+            if (folder === 'multiplayer-board-games' || folder === 'tictactoe-test') return 'Multiplayer Board Games';
             return folder.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
 
@@ -1034,7 +1034,7 @@
     </script>
     <script src="../chat/chat-config.js"></script>
     <script type="module">
-        import { createSitePasscodeRecord, hashSitePasscode, hexToBytes, isValidSitePasscode, SITE_PASSCODE_SESSION_KEY } from "../scripts/site-passcode.js";
+        import { createSitePasscodeRecord, hashSitePasscode, hexToBytes, isValidSitePasscode, readSavedSitePasscodeHash, saveSitePasscodeHash } from "../scripts/site-passcode.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { EmailAuthProvider, getAuth, linkWithCredential, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
         import { get, getDatabase, limitToLast, onChildAdded, onChildRemoved, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
@@ -1118,8 +1118,6 @@
         let chatBannedUsers = new Set();
         let chatBannedNames = new Set();
         const messageElements = new Map();
-
-        const passcodeSessionKey = SITE_PASSCODE_SESSION_KEY;
 
         const partyColors = ["#ff526e", "#ffd84d", "#56d6c9", "#69a7ff", "#c58cff"];
         for (let index = 0; index < 32; index += 1) {
@@ -1206,12 +1204,7 @@
 
         function isPasscodeUnlocked(hash) {
             if (unlockedPasscodeHash === hash) return true;
-            try {
-                return sessionStorage.getItem(passcodeSessionKey) === hash;
-            } catch (error) {
-                console.warn("Passcode session could not be read", error);
-                return false;
-            }
+            return readSavedSitePasscodeHash() === hash;
         }
 
         function setPasscodeGateVisible(visible) {
@@ -1271,13 +1264,9 @@
                 const hash = await hashSitePasscode(passcodeUnlockInput.value, hexToBytes(currentPasscodeGate.salt));
                 if (hash === currentPasscodeGate.hash) {
                     unlockedPasscodeHash = hash;
-                    try {
-                        sessionStorage.setItem(passcodeSessionKey, hash);
-                    } catch (error) {
-                        console.warn("Passcode session could not be saved", error);
-                    }
+                    const saved = saveSitePasscodeHash(hash);
                     passcodeUnlockInput.value = "";
-                    passcodeGateStatus.textContent = "";
+                    passcodeGateStatus.textContent = saved ? "" : "Passcode accepted, but this browser could not save it.";
                     setPasscodeGateVisible(false);
                 } else {
                     passcodeGateStatus.textContent = "That passcode did not match.";

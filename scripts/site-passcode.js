@@ -1,5 +1,37 @@
 export const SITE_PASSCODE_ITERATIONS = 210000;
-export const SITE_PASSCODE_SESSION_KEY = "arcade-site-passcode-hash";
+export const SITE_PASSCODE_STORAGE_KEY = "arcade-site-passcode-hash";
+const LEGACY_SESSION_KEY = SITE_PASSCODE_STORAGE_KEY;
+
+export function readSavedSitePasscodeHash() {
+    try {
+        const savedHash = localStorage.getItem(SITE_PASSCODE_STORAGE_KEY);
+        if (savedHash) return savedHash;
+    } catch (error) {
+        console.warn("Saved site passcode could not be read", error);
+        return null;
+    }
+
+    try {
+        const legacyHash = sessionStorage.getItem(LEGACY_SESSION_KEY);
+        if (!legacyHash) return null;
+        localStorage.setItem(SITE_PASSCODE_STORAGE_KEY, legacyHash);
+        sessionStorage.removeItem(LEGACY_SESSION_KEY);
+        return legacyHash;
+    } catch (error) {
+        console.warn("The previous session passcode could not be migrated", error);
+        return null;
+    }
+}
+
+export function saveSitePasscodeHash(hash) {
+    try {
+        localStorage.setItem(SITE_PASSCODE_STORAGE_KEY, hash);
+        return true;
+    } catch (error) {
+        console.warn("Site passcode could not be saved in this browser", error);
+        return false;
+    }
+}
 
 function bytesToHex(bytes) {
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
