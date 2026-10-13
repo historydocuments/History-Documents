@@ -824,11 +824,11 @@
 
         function init() {
             document.getElementById('build-version').textContent = BUILD_VERSION;
-            checkSiteStatus();
 
             if (window.location.protocol === 'file:') {
                 // LOCAL: Show host setup
                 document.getElementById('host-section').style.display = 'block';
+                checkSiteStatus();
             } else {
                 // SERVER: Attempt to load games
                 try {

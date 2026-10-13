@@ -58,7 +58,7 @@
 </section>
 <main>
     <header>
-        <a href="../index.html">&larr; Back to Arcade Hub</a>
+        <a href="../index.html" target="_top">&larr; Back to Arcade Hub</a>
         <h1>Tic-Tac-Toe Test</h1>
         <p class="muted">Play Tic-Tac-Toe together on two devices. Create a room, then share its link or six-character code.</p>
         <p id="connection-status" role="status" aria-live="polite">Connecting to the classroom service...</p>
@@ -317,8 +317,14 @@
         const roomRef = ref(database, `classroomRooms/${code}`);
         const snapshot = await get(roomRef);
         if (!snapshot.exists()) throw new Error("That room was not found. Check the code and try again.");
+        const initialRoomData = snapshot.val();
+        let usedInitialRoomData = false;
 
         const transaction = await runTransaction(roomRef, (roomData) => {
+            if (!roomData && !usedInitialRoomData) {
+                roomData = initialRoomData;
+                usedInitialRoomData = true;
+            }
             if (!roomData || !roomData.players) return;
             if (roomData.players.x === currentUid || roomData.players.o === currentUid) return roomData;
             if (roomData.status !== "waiting" || roomData.players.o) return;
