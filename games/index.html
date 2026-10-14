@@ -131,6 +131,12 @@
         .identity-actions { display: flex; gap: 8px; margin-top: 10px; }
         .identity-actions button { min-height: 36px; padding: 0 10px; border: 1px solid #354139; border-radius: 5px; background: transparent; color: #dce8df; font: inherit; font-size: 0.76rem; cursor: pointer; }
         .identity-status { min-height: 1.2em; margin: 8px 0 0; color: #9eaea3; font-size: 0.76rem; }
+        .quick-iframe-shortcut { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+        .quick-iframe-shortcut input { min-width: 0; min-height: 38px; padding: 0 9px; border: 1px solid #354139; border-radius: 5px; background: #101713; color: #edf4ef; font: inherit; }
+        .quick-iframe-shortcut button, .quick-iframe-actions button { min-height: 38px; padding: 0 10px; border: 1px solid #354139; border-radius: 5px; background: transparent; color: #dce8df; font: inherit; font-size: 0.76rem; cursor: pointer; }
+        .quick-iframe-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .quick-iframe-status { min-height: 1.2em; margin: 8px 0 0; color: #9eaea3; font-size: 0.76rem; }
+        .quick-iframe-status.error { color: #ff9a8c; }
         .passcode-gate { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: 20px; background: #101713; color: #edf4ef; }
         .passcode-gate[hidden] { display: none; }
         .passcode-card { width: min(380px, 100%); padding: 24px; border: 1px solid #354139; border-radius: 10px; background: #151d18; box-shadow: 0 24px 80px #000a; }
@@ -147,6 +153,11 @@
         .game-view { position: fixed; inset: 0; z-index: 10000; background: #000; }
         .game-view[hidden] { display: none; }
         #game-frame { display: block; width: 100%; height: 100%; border: 0; background: #000; }
+        #quick-iframe-overlay { position: fixed; inset: 0; z-index: 15000; background: #000; }
+        #quick-iframe-overlay[hidden] { display: none; }
+        #quick-iframe { display: block; width: 100%; height: 100%; border: 0; background: #000; }
+        #quick-iframe-close { position: absolute; top: 14px; right: 14px; z-index: 1; min-height: 40px; padding: 0 12px; border: 1px solid #ffffff55; border-radius: 6px; background: #101713e8; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+        #quick-iframe-close:hover { border-color: var(--primary); }
         .frame-loading { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; background: #080b0a; color: #eef5f0; text-align: center; pointer-events: none; }
         .frame-loading[hidden], .frame-load-fallback[hidden] { display: none; }
         .frame-loading p { margin: 12px 0 0; font-size: 0.9rem; }
@@ -420,9 +431,33 @@
                 </div>
             </fieldset>
             <fieldset class="settings-group">
+                <legend>Quick page overlay</legend>
+                <p class="settings-panel-note" style="margin: 0 0 12px">Save a web link and keyboard shortcut. Press the shortcut to show or hide the page over the whole screen. Some websites block iframe embedding; use the close button if the page takes keyboard focus.</p>
+                <form id="quick-iframe-form">
+                    <label class="identity-control" for="quick-iframe-url">Website link
+                        <input id="quick-iframe-url" type="url" maxlength="2048" autocomplete="url" placeholder="https://example.com" required>
+                    </label>
+                    <div class="identity-control">
+                        <label for="quick-iframe-hotkey">Hotkey</label>
+                        <div class="quick-iframe-shortcut">
+                            <input id="quick-iframe-hotkey" type="text" placeholder="Click Record, then press a key" readonly aria-describedby="quick-iframe-status">
+                            <button id="quick-iframe-record" type="button">Record</button>
+                        </div>
+                    </div>
+                    <div class="quick-iframe-actions">
+                        <button type="submit">Save shortcut</button>
+                        <button id="quick-iframe-clear" type="button">Clear</button>
+                    </div>
+                </form>
+                <p id="quick-iframe-status" class="quick-iframe-status" role="status" aria-live="polite">Shortcut not configured.</p>
+            </fieldset>
+            <fieldset class="settings-group">
                 <legend>Site branding</legend>
-                <p class="settings-panel-note" style="margin: 0 0 12px">Choose a name and paste an HTTP(S) link to an icon image for your site branding.</p>
+                <p class="settings-panel-note" style="margin: 0 0 12px">Use a website you own or are authorized to represent. Enter its link to use its domain and standard favicon as this site's tab branding.</p>
                 <form id="site-identity-form">
+                    <label class="identity-control" for="site-identity-website">Website link
+                        <input id="site-identity-website" type="url" maxlength="2048" autocomplete="url" placeholder="https://example.com">
+                    </label>
                     <div class="identity-controls">
                         <label class="identity-control" for="site-identity-name">Site name
                             <input id="site-identity-name" type="text" maxlength="40" autocomplete="off" placeholder="My Arcade">
@@ -432,6 +467,7 @@
                         </label>
                     </div>
                     <div class="identity-actions">
+                        <button id="site-identity-use-website" type="button">Use website link</button>
                         <button type="submit">Apply branding</button>
                         <button id="site-identity-reset" type="button">Reset</button>
                     </div>
@@ -485,6 +521,10 @@
             <button id="viewer-admin-open" class="admin-open viewer-toolbar-action" type="button" aria-controls="admin-panel" hidden>Admin</button>
         </div>
         <p id="viewer-hint" class="viewer-hint">Toolbar visibility can be changed in Arcade Settings. Browser Back also exits the game.</p>
+    </section>
+    <section id="quick-iframe-overlay" role="dialog" aria-label="Quick page overlay" aria-modal="true" hidden>
+        <iframe id="quick-iframe" title="Quick page" allow="fullscreen *; autoplay *" referrerpolicy="no-referrer"></iframe>
+        <button id="quick-iframe-close" type="button" aria-label="Close quick page overlay">Close</button>
     </section>
 
     <aside id="announcement-banner" class="announcement-banner" role="status" aria-live="polite" hidden>
@@ -680,6 +720,14 @@
         ];
         const settingsToggle = document.getElementById('settings-toggle');
         const settingsDialog = document.getElementById('settings-dialog');
+        const quickIframeForm = document.getElementById('quick-iframe-form');
+        const quickIframeUrlInput = document.getElementById('quick-iframe-url');
+        const quickIframeHotkeyInput = document.getElementById('quick-iframe-hotkey');
+        const quickIframeRecordButton = document.getElementById('quick-iframe-record');
+        const quickIframeStatus = document.getElementById('quick-iframe-status');
+        const quickIframeOverlay = document.getElementById('quick-iframe-overlay');
+        const quickIframe = document.getElementById('quick-iframe');
+        const quickIframeCloseButton = document.getElementById('quick-iframe-close');
         const themeRadios = document.querySelectorAll('input[name="theme"]');
         const toolbarModeRadios = document.querySelectorAll('input[name="toolbar-mode"]');
         const customThemeColorInputs = {
@@ -709,6 +757,10 @@
         let frameLoadTimer;
         let frameReadyTimer;
         let activeGameLoad = 0;
+        let quickIframeHotkey = null;
+        let quickIframeConfig = null;
+        let quickIframeRecording = false;
+        let quickIframeReturnFocus = null;
 
         function readPreference(key, fallback) {
             try {
@@ -723,6 +775,166 @@
                 localStorage.setItem(key, value);
             } catch {}
         }
+
+        function formatQuickIframeHotkey(shortcut) {
+            const modifiers = [];
+            if (shortcut.ctrl) modifiers.push('Ctrl');
+            if (shortcut.alt) modifiers.push('Alt');
+            if (shortcut.shift) modifiers.push('Shift');
+            if (shortcut.meta) modifiers.push('Meta');
+            modifiers.push(shortcut.key);
+            return modifiers.join('+');
+        }
+
+        function isValidQuickIframeShortcut(shortcut) {
+            return shortcut && typeof shortcut.code === 'string' && shortcut.code.length > 0 &&
+                typeof shortcut.key === 'string' && shortcut.key.length > 0 &&
+                ['ctrl', 'alt', 'shift', 'meta'].every((modifier) => typeof shortcut[modifier] === 'boolean');
+        }
+
+        function loadQuickIframeSettings() {
+            let saved;
+            try {
+                const value = localStorage.getItem('arcade-quick-iframe');
+                if (!value) return;
+                saved = JSON.parse(value);
+            } catch {
+                quickIframeStatus.textContent = 'Could not read the saved page shortcut from this browser.';
+                quickIframeStatus.classList.add('error');
+                return;
+            }
+            if (!saved || typeof saved !== 'object' || typeof saved.url !== 'string') {
+                quickIframeStatus.textContent = 'The saved page shortcut is invalid. Set it up again in Settings.';
+                quickIframeStatus.classList.add('error');
+                return;
+            }
+
+            let url;
+            try {
+                url = new URL(saved.url);
+            } catch {
+                quickIframeStatus.textContent = 'The saved page shortcut is invalid. Set it up again in Settings.';
+                quickIframeStatus.classList.add('error');
+                return;
+            }
+            if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !isValidQuickIframeShortcut(saved.shortcut)) {
+                quickIframeStatus.textContent = 'The saved page shortcut is invalid. Set it up again in Settings.';
+                quickIframeStatus.classList.add('error');
+                return;
+            }
+
+            quickIframeHotkey = saved.shortcut;
+            quickIframeConfig = { url: url.href, shortcut: saved.shortcut };
+            quickIframeUrlInput.value = url.href;
+            quickIframeHotkeyInput.value = formatQuickIframeHotkey(quickIframeHotkey);
+            quickIframeStatus.textContent = `Saved. Press ${quickIframeHotkeyInput.value} to show or hide the page.`;
+        }
+
+        function closeQuickIframe() {
+            quickIframeOverlay.hidden = true;
+            quickIframe.src = 'about:blank';
+            if (quickIframeReturnFocus instanceof HTMLElement) quickIframeReturnFocus.focus();
+            quickIframeReturnFocus = null;
+        }
+
+        function toggleQuickIframe() {
+            if (!quickIframeOverlay.hidden) {
+                closeQuickIframe();
+                return;
+            }
+            if (!quickIframeConfig) return;
+            quickIframeReturnFocus = document.activeElement;
+            quickIframe.src = quickIframeConfig.url;
+            quickIframeOverlay.hidden = false;
+            quickIframeCloseButton.focus();
+        }
+
+        quickIframeRecordButton.addEventListener('click', () => {
+            quickIframeRecording = true;
+            quickIframeRecordButton.textContent = 'Press a key...';
+            quickIframeStatus.classList.remove('error');
+            quickIframeStatus.textContent = 'Press the key combination you want to use.';
+            quickIframeRecordButton.focus();
+        });
+
+        quickIframeRecordButton.addEventListener('keydown', (event) => {
+            if (!quickIframeRecording || ['Control', 'Alt', 'Shift', 'Meta'].includes(event.key) || !event.code) return;
+            event.preventDefault();
+            event.stopPropagation();
+            quickIframeRecording = false;
+            quickIframeHotkey = {
+                code: event.code,
+                key: event.key === ' ' ? 'Space' : event.key.length === 1 ? event.key.toUpperCase() : event.key,
+                ctrl: event.ctrlKey,
+                alt: event.altKey,
+                shift: event.shiftKey,
+                meta: event.metaKey
+            };
+            quickIframeHotkeyInput.value = formatQuickIframeHotkey(quickIframeHotkey);
+            quickIframeRecordButton.textContent = 'Record';
+            quickIframeStatus.textContent = 'Shortcut captured. Save to apply it.';
+        });
+
+        quickIframeForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            let url;
+            try {
+                url = new URL(quickIframeUrlInput.value.trim());
+            } catch {
+                quickIframeStatus.classList.add('error');
+                quickIframeStatus.textContent = 'Enter a valid HTTP(S) website link.';
+                quickIframeUrlInput.focus();
+                return;
+            }
+            if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !isValidQuickIframeShortcut(quickIframeHotkey)) {
+                quickIframeStatus.classList.add('error');
+                quickIframeStatus.textContent = 'Enter an HTTP(S) website link and record a hotkey before saving.';
+                return;
+            }
+
+            try {
+                localStorage.setItem('arcade-quick-iframe', JSON.stringify({ url: url.href, shortcut: quickIframeHotkey }));
+            } catch {
+                quickIframeStatus.classList.add('error');
+                quickIframeStatus.textContent = 'Could not save the page shortcut in this browser.';
+                return;
+            }
+
+            quickIframeUrlInput.value = url.href;
+            quickIframeConfig = { url: url.href, shortcut: quickIframeHotkey };
+            quickIframeStatus.classList.remove('error');
+            quickIframeStatus.textContent = `Saved. Press ${formatQuickIframeHotkey(quickIframeHotkey)} to show or hide the page.`;
+        });
+
+        document.getElementById('quick-iframe-clear').addEventListener('click', () => {
+            try {
+                localStorage.removeItem('arcade-quick-iframe');
+            } catch {
+                quickIframeStatus.classList.add('error');
+                quickIframeStatus.textContent = 'Could not clear the page shortcut from this browser.';
+                return;
+            }
+            quickIframeHotkey = null;
+            quickIframeConfig = null;
+            quickIframeUrlInput.value = '';
+            quickIframeHotkeyInput.value = '';
+            quickIframeStatus.classList.remove('error');
+            quickIframeStatus.textContent = 'Shortcut cleared.';
+        });
+
+        quickIframeCloseButton.addEventListener('click', closeQuickIframe);
+        document.addEventListener('keydown', (event) => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (!quickIframeConfig || quickIframeRecording || event.repeat || event.isComposing ||
+                document.querySelector('dialog[open]') ||
+                target && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+            const shortcut = quickIframeConfig.shortcut;
+            if (event.code !== shortcut.code || event.ctrlKey !== shortcut.ctrl ||
+                event.altKey !== shortcut.alt || event.shiftKey !== shortcut.shift ||
+                event.metaKey !== shortcut.meta) return;
+            event.preventDefault();
+            toggleQuickIframe();
+        });
 
         function loadCustomThemeColors() {
             let savedColors;
@@ -982,18 +1194,39 @@
         }
 
         applyPreferences();
+        loadQuickIframeSettings();
         init();
     </script>
     <script type="module">
         import { applySiteIdentity, isValidSiteIconUrl, readSiteIdentity, SITE_ICON_KEY, SITE_NAME_KEY } from "../scripts/site-identity.js";
 
         const identityForm = document.getElementById("site-identity-form");
+        const websiteInput = document.getElementById("site-identity-website");
         const nameInput = document.getElementById("site-identity-name");
         const iconInput = document.getElementById("site-identity-icon");
         const status = document.getElementById("site-identity-status");
         const defaults = readSiteIdentity();
         nameInput.value = defaults.name === "Arcade Hub" ? "" : defaults.name;
         iconInput.value = isValidSiteIconUrl(defaults.icon) ? defaults.icon : "";
+
+        document.getElementById("site-identity-use-website").addEventListener("click", () => {
+            let website;
+            try {
+                website = new URL(websiteInput.value.trim());
+            } catch {
+                status.textContent = "Enter a valid HTTP(S) website link.";
+                websiteInput.focus();
+                return;
+            }
+            if (website.protocol !== "https:" && website.protocol !== "http:") {
+                status.textContent = "Enter a valid HTTP(S) website link.";
+                websiteInput.focus();
+                return;
+            }
+            nameInput.value = website.hostname.replace(/^www\./i, "");
+            iconInput.value = new URL("/favicon.ico", website.origin).href;
+            status.textContent = "Website branding filled in. Review it, then apply branding.";
+        });
 
         identityForm.addEventListener("submit", (event) => {
             event.preventDefault();
