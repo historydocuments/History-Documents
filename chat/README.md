@@ -139,7 +139,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
     },
     "classroomRooms": {
       ".read": "auth != null && query.orderByChild == 'isPrivate' && query.equalTo == false",
-      ".indexOn": ["isPrivate"],
+      ".indexOn": ["isPrivate", "lastActiveAt"],
       "$roomCode": {
         ".read": "auth != null",
         ".write": "auth != null && ((!data.exists() && newData.child('players/x').val() === auth.uid) || (data.exists() && (data.child('players/x').val() === auth.uid || data.child('players/o').val() === auth.uid || (data.child('status').val() === 'waiting' && data.child('players/o').val() === null && newData.child('players/o').val() === auth.uid && newData.child('players/x').val() === data.child('players/x').val()))))",
@@ -192,6 +192,14 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
         "createdAt": {
           ".validate": "newData.isNumber()"
         },
+        "lastActiveAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "presence": {
+          "$uid": {
+            ".validate": "newData.isBoolean()"
+          }
+        },
         "$other": {
           ".validate": false
         }
@@ -242,7 +250,19 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 
 The admin control room's **Operations** tab can set or remove a shared site passcode. Publish the rules above for `siteControl/accessGate` before setting it. After a visitor enters the passcode, the salted PBKDF2 hash used to verify it is saved in browser storage and shared across the home page, arcade hub, and Multiplayer Board Games page on that browser. This is only a casual browser-side deterrent: GitHub Pages publishes all static files directly, and the Firebase client-readable hash can be guessed offline. It does not prevent direct access to the other game URLs, so don't use it to protect sensitive content. If the passcode is forgotten, an admin can remove `siteControl/accessGate` in the Firebase console.
 
-The **Multiplayer Board Games** page supports Tic-Tac-Toe and chess, a live room chat, and a public list of waiting rooms. Realtime Database rules must include `classroomRooms` and `classroomRoomChats` as shown above; publish the complete rules before creating or joining rooms. The lobby queries only `classroomRooms` records whose `isPrivate` value is `false`, and the rules require that exact query so private-room records are not listed. Waiting rooms are shown; rooms already in play are omitted. Private rooms can only be joined by someone with their invite code or link (the code is an unlisted invite, not a security boundary). A logged-in account's saved profile name is used as the default player name; each browser tab still uses its own session-scoped Firebase identity, so opening the same room in another tab counts as the second player. The room chat is readable and writable only by the room's two player UIDs. The page uses the open-source [chess.js](https://github.com/jhlywa/chess.js) library for legal chess moves, with castling, en passant, promotion, check, checkmate, and draws including repetition. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
+The **Multiplayer Board Games** page supports Tic-Tac-Toe and chess, a live room chat, and a public list of waiting rooms. Realtime Database rules must include `classroomRooms` and `classroomRoomChats` as shown above; publish the complete rules before creating or joining rooms. The lobby queries only `classroomRooms` records whose `isPrivate` value is `false`, and the rules require that exact query so private-room records are not listed. Waiting rooms are shown; rooms already in play are omitted. Private rooms can only be joined by someone with their invite code or link (the code is an unlisted invite, not a security boundary). A logged-in account's saved profile name is used as the default player name; each browser tab still uses its own session-scoped Firebase identity, so opening the same room in another tab counts as the second player. The room chat is readable and writable only by the room's two player UIDs. The page reports whether the current tab is actually listed as a room player when Firebase denies chat, and identifies the configured Firebase project/database for rules troubleshooting. The page registers each connected player in the room's `presence` data and updates `lastActiveAt`; the scheduled cleanup removes rooms with no connected players after two minutes of inactivity. Deploy the cleanup function described below for abandoned rooms to be removed automatically. The page uses the open-source [chess.js](https://github.com/jhlywa/chess.js) library for legal chess moves, with castling, en passant, promotion, check, checkmate, and draws including repetition. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
+
+### Deploy multiplayer room cleanup
+
+Room cleanup runs as a scheduled Firebase Cloud Function, so the Firebase project must use the Blaze plan and have Cloud Scheduler enabled. From the repository root, install the Functions dependencies, select the same Firebase project and deploy:
+
+```sh
+npm --prefix functions install
+npx firebase-tools use historydocuments
+npx firebase-tools deploy --only functions:cleanupEmptyClassroomRooms
+```
+
+If the project selected by `chat/chat-config.js` changes, select that project instead of `historydocuments`. The function checks every five minutes and deletes a room (and its chat) when it has no connected player presence and has been inactive for at least two minutes. Existing rooms without a `lastActiveAt` timestamp use their `createdAt` as the inactivity baseline. Publish the updated Realtime Database rules above before deploying the function and updated page.
 
 Chess piece silhouettes are from [Font Awesome Free](https://fontawesome.com), by Fonticons, Inc., and are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 

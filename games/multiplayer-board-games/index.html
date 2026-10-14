@@ -103,6 +103,7 @@
         .chat-message p { margin: 3px 0 0; white-space: pre-wrap; }
         .chat-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
         .chat-form input { min-width: 0; }
+        #chat-status { overflow-wrap: anywhere; }
         .passcode-gate { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: var(--bg); }
         .passcode-card { width: min(380px, 100%); padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
         .passcode-card h2 { color: var(--accent); }
@@ -224,7 +225,7 @@
     import { hashSitePasscode, hexToBytes, isValidSitePasscode, readSavedSitePasscodeHash, saveSitePasscodeHash } from "../../scripts/site-passcode.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
     import { browserSessionPersistence, getAuth, onAuthStateChanged, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-    import { equalTo, get, getDatabase, limitToLast, onChildAdded, onValue, orderByChild, push, query, ref, runTransaction, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+    import { equalTo, get, getDatabase, limitToLast, onChildAdded, onDisconnect, onValue, orderByChild, push, query, ref, remove, runTransaction, serverTimestamp, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
     const $ = (id) => document.getElementById(id);
     const connectionStatus = $("connection-status");
@@ -246,6 +247,9 @@
     let stopRoomListener = null;
     let stopChatListener = null;
     let stopPublicRoomListener = null;
+    let stopConnectionListener = null;
+    let roomHeartbeatTimer = null;
+    let activePresenceRef = null;
     let currentRoom = null;
     let movePending = false;
     let selectedSquare = null;
@@ -406,6 +410,27 @@
         $("chat-send").disabled = true;
     }
 
+    async function roomChatPermissionMessage(code) {
+        const databaseUrl = window.CHAT_FIREBASE_CONFIG && window.CHAT_FIREBASE_CONFIG.databaseURL;
+        const projectId = window.CHAT_FIREBASE_CONFIG && window.CHAT_FIREBASE_CONFIG.projectId;
+        const fallback = `Firebase denied room chat. Check that the published rules are in ${projectId || databaseUrl || "the configured Firebase project"}.`;
+        try {
+            const snapshot = await get(ref(database, `classroomRooms/${code}`));
+            const room = snapshot.val();
+            if (!room || !room.players) {
+                return `Room ${code} no longer exists in ${projectId || databaseUrl || "the configured Firebase project"}.`;
+            }
+            const side = room.players.x === currentUid ? "X" : room.players.o === currentUid ? "O" : null;
+            if (!side) {
+                return `This tab's Firebase player session is not listed in room ${code}. Rejoin the room in this tab; each browser tab has its own player identity.`;
+            }
+            return `Room ${code} lists this tab as player ${side}, but Firebase denied chat. Publish the room-chat rules to ${projectId || databaseUrl || "the configured Firebase project"} and verify its database URL is ${databaseUrl || "the configured URL"}.`;
+        } catch (error) {
+            console.error("Multiplayer chat permission diagnosis failed", error);
+            return fallback;
+        }
+    }
+
     function addChatMessage(message) {
         if (!message || typeof message.text !== "string" || typeof message.name !== "string") return;
         const item = document.createElement("li");
@@ -426,9 +451,13 @@
         const chatQuery = query(ref(database, `classroomRoomChats/${code}`), limitToLast(50));
         stopChatListener = onChildAdded(chatQuery, (snapshot) => addChatMessage(snapshot.val()), (error) => {
             console.error("Multiplayer room chat could not be loaded", error);
-            $("chat-status").textContent = isPermissionDenied(error)
-                ? "Firebase denied chat access. Publish the classroomRoomChats rules and confirm this room's player IDs match this tab's Firebase account."
-                : "Chat could not load. Check the Firebase room chat rules.";
+            if (isPermissionDenied(error)) {
+                roomChatPermissionMessage(code).then((message) => {
+                    if (activeRoomCode === code) $("chat-status").textContent = message;
+                });
+            } else {
+                $("chat-status").textContent = "Chat could not load. Check the Firebase room chat rules.";
+            }
         });
         $("chat-status").textContent = "";
         $("chat-input").disabled = false;
@@ -566,10 +595,11 @@
         $("share-link").textContent = invite.href;
         history.replaceState(null, "", invite.href);
         renderRoom(roomData);
+        startRoomPresence(code);
         startRoomChat(code);
         stopRoomListener = onValue(roomRef, (snapshot) => {
             if (!snapshot.exists()) {
-                leaveRoom("This room no longer exists.");
+                leaveRoom("This room no longer exists.", false);
                 return;
             }
             const updatedRoom = snapshot.val();
@@ -580,9 +610,10 @@
         });
     }
 
-    function leaveRoom(message = "") {
+    function leaveRoom(message = "", clearPresence = true) {
         if (stopRoomListener) stopRoomListener();
         stopRoomListener = null;
+        stopRoomPresence(clearPresence);
         clearChat();
         activeRoomCode = null;
         activeRoomRef = null;
@@ -695,8 +726,57 @@
             turn: "x",
             status: "waiting",
             winner: null,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            lastActiveAt: 0,
+            presence: {}
         };
+    }
+
+    function stopRoomPresence(clearPresence = true) {
+        if (stopConnectionListener) stopConnectionListener();
+        stopConnectionListener = null;
+        if (roomHeartbeatTimer) clearInterval(roomHeartbeatTimer);
+        roomHeartbeatTimer = null;
+        const presenceRef = activePresenceRef;
+        activePresenceRef = null;
+        if (!presenceRef) return;
+        onDisconnect(presenceRef).cancel().then(() => {
+            if (clearPresence) return remove(presenceRef);
+        }).catch((error) => {
+            console.error("Multiplayer room presence could not be cleared", error);
+        });
+    }
+
+    function startRoomPresence(code) {
+        stopRoomPresence();
+        const presenceRef = ref(database, `classroomRooms/${code}/presence/${currentUid}`);
+        const lastActiveRef = ref(database, `classroomRooms/${code}/lastActiveAt`);
+        activePresenceRef = presenceRef;
+        stopConnectionListener = onValue(ref(database, ".info/connected"), async (snapshot) => {
+            if (snapshot.val() !== true || activeRoomCode !== code) return;
+            try {
+                await onDisconnect(presenceRef).remove();
+                if (activeRoomCode !== code) {
+                    await onDisconnect(presenceRef).cancel();
+                    return;
+                }
+                await set(presenceRef, true);
+                await set(lastActiveRef, serverTimestamp());
+            } catch (error) {
+                console.error("Multiplayer room presence could not be registered", error);
+                if (activeRoomCode === code) {
+                    $("game-status").textContent = "Room presence could not be registered. Check the published multiplayer room rules.";
+                }
+            }
+        }, (error) => {
+            console.error("Multiplayer connection status could not be monitored", error);
+        });
+        roomHeartbeatTimer = setInterval(() => {
+            if (activeRoomCode !== code) return;
+            set(lastActiveRef, serverTimestamp()).catch((error) => {
+                console.error("Multiplayer room heartbeat failed", error);
+            });
+        }, 60000);
     }
 
     async function createRoom() {
@@ -878,9 +958,10 @@
         event.preventDefault();
         const text = $("chat-input").value.trim();
         if (!text || !activeRoomCode || !currentUid) return;
+        const roomCode = activeRoomCode;
         $("chat-send").disabled = true;
         try {
-            await set(push(ref(database, `classroomRoomChats/${activeRoomCode}`)), {
+            await set(push(ref(database, `classroomRoomChats/${roomCode}`)), {
                 uid: currentUid,
                 name: (playerName.value.trim() || "Player").slice(0, 20),
                 text: text.slice(0, 300),
@@ -891,7 +972,7 @@
         } catch (error) {
             console.error("Multiplayer room chat message failed", error);
             $("chat-status").textContent = isPermissionDenied(error)
-                ? "Firebase denied the message. Publish the classroomRoomChats rules and confirm your Firebase account is a player in this room."
+                ? await roomChatPermissionMessage(roomCode)
                 : "Message could not be sent. Check your connection and the Firebase room chat rules.";
         } finally { $("chat-send").disabled = !activeRoomCode; }
     });
