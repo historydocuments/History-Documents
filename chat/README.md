@@ -7,7 +7,7 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 3. In **Realtime Database**, create a database and copy its URL (for example, `https://your-project-default-rtdb.firebaseio.com`).
 4. Copy the web app's `apiKey`, `authDomain`, `projectId`, and `appId`, plus the database URL, into [`chat-config.js`](chat-config.js).
 5. In **Authentication > Settings > Authorized domains**, add the Netlify hostname and the GitHub Pages hostname that will serve the site.
-6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, site controls, chat bans and moderation, multiplayer rooms, public-room directory, room chat, and message write rules must all be live in the same database used by `chat-config.js`:
+6. In **Realtime Database > Rules**, replace the rules with the following and click **Publish**. The username reservation, private profile, admin check, announcement, site controls, chat bans and moderation, multiplayer rooms, room chat, and message write rules must all be live in the same database used by `chat-config.js`:
 
 ```json
 {
@@ -138,6 +138,8 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
       }
     },
     "classroomRooms": {
+      ".read": "auth != null && query.orderByChild == 'isPrivate' && query.equalTo == false",
+      ".indexOn": ["isPrivate"],
       "$roomCode": {
         ".read": "auth != null",
         ".write": "auth != null && ((!data.exists() && newData.child('players/x').val() === auth.uid) || (data.exists() && (data.child('players/x').val() === auth.uid || data.child('players/o').val() === auth.uid || (data.child('status').val() === 'waiting' && data.child('players/o').val() === null && newData.child('players/o').val() === auth.uid && newData.child('players/x').val() === data.child('players/x').val()))))",
@@ -195,16 +197,6 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
         }
       }
     },
-    "classroomPublicRooms": {
-      ".read": "auth != null",
-      "$roomCode": {
-        ".write": "auth != null && (root.child('classroomRooms').child($roomCode).child('players/x').val() === auth.uid || root.child('classroomRooms').child($roomCode).child('players/o').val() === auth.uid) && (!newData.exists() || (root.child('classroomRooms').child($roomCode).child('status').val() === 'waiting' && root.child('classroomRooms').child($roomCode).child('isPrivate').val() !== true))",
-        ".validate": "newData.hasChildren(['game', 'hostName', 'createdAt']) && newData.child('game').val().matches(/^(tic-tac-toe|chess)$/) && newData.child('hostName').isString() && newData.child('hostName').val().length <= 20 && newData.child('createdAt').isNumber()",
-        "$other": {
-          ".validate": false
-        }
-      }
-    },
     "classroomRoomChats": {
       "$roomCode": {
         ".read": "auth != null && (root.child('classroomRooms').child($roomCode).child('players/x').val() === auth.uid || root.child('classroomRooms').child($roomCode).child('players/o').val() === auth.uid)",
@@ -250,7 +242,9 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 
 The admin control room's **Operations** tab can set or remove a shared site passcode. Publish the rules above for `siteControl/accessGate` before setting it. After a visitor enters the passcode, the salted PBKDF2 hash used to verify it is saved in browser storage and shared across the home page, arcade hub, and Multiplayer Board Games page on that browser. This is only a casual browser-side deterrent: GitHub Pages publishes all static files directly, and the Firebase client-readable hash can be guessed offline. It does not prevent direct access to the other game URLs, so don't use it to protect sensitive content. If the passcode is forgotten, an admin can remove `siteControl/accessGate` in the Firebase console.
 
-The **Multiplayer Board Games** page supports Tic-Tac-Toe and chess, a live room chat, and a public directory of waiting rooms. Realtime Database rules must include `classroomRooms`, `classroomPublicRooms`, and `classroomRoomChats` as shown above; publish the complete rules before creating or joining rooms. Public rooms appear in the directory; rooms marked private are omitted and can only be joined by someone with their invite code or link (the code is an unlisted invite, not a security boundary). Each browser tab uses its own session-scoped Firebase identity, so opening the same room in another tab counts as the second player; reloading a tab keeps its identity for that tab session. The page uses the open-source [chess.js](https://github.com/jhlywa/chess.js) library for legal chess moves, with castling, en passant, promotion, check, checkmate, and draws including repetition. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
+The **Multiplayer Board Games** page supports Tic-Tac-Toe and chess, a live room chat, and a public list of waiting rooms. Realtime Database rules must include `classroomRooms` and `classroomRoomChats` as shown above; publish the complete rules before creating or joining rooms. The lobby queries only `classroomRooms` records whose `isPrivate` value is `false`, and the rules require that exact query so private-room records are not listed. Waiting rooms are shown; rooms already in play are omitted. Private rooms can only be joined by someone with their invite code or link (the code is an unlisted invite, not a security boundary). A logged-in account's saved profile name is used as the default player name; each browser tab still uses its own session-scoped Firebase identity, so opening the same room in another tab counts as the second player. The room chat is readable and writable only by the room's two player UIDs. The page uses the open-source [chess.js](https://github.com/jhlywa/chess.js) library for legal chess moves, with castling, en passant, promotion, check, checkmate, and draws including repetition. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
+
+Chess piece silhouettes are from [Font Awesome Free](https://fontawesome.com), by Fonticons, Inc., and are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 The admin control room can publish a site-wide theme and accent, set default theme and accent preferences for visitors who have not chosen a local theme, toggle confetti, send or clear an announcement, and request a refresh. It can be opened while a game is running. Refresh requests reload visitors who already have the updated arcade code open; users with older code, closed tabs, or offline browsers cannot be remotely refreshed. A force refresh may interrupt a game.
 The **Fun** tab lets an admin launch a random game or trigger a one-off confetti burst in their current tab. Admins can also force a selected game for visitors with the current arcade page connected; this replaces any game they are currently playing in the arcade frame. Visitors with closed tabs, older code, or offline browsers are not affected.

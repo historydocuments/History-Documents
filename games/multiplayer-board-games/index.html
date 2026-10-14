@@ -223,8 +223,8 @@
 
     import { hashSitePasscode, hexToBytes, isValidSitePasscode, readSavedSitePasscodeHash, saveSitePasscodeHash } from "../../scripts/site-passcode.js";
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-    import { browserSessionPersistence, getAuth, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-    import { get, getDatabase, limitToLast, onChildAdded, onValue, push, query, ref, remove, runTransaction, serverTimestamp, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+    import { browserSessionPersistence, getAuth, onAuthStateChanged, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { equalTo, get, getDatabase, limitToLast, onChildAdded, onValue, orderByChild, push, query, ref, runTransaction, set } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
     const $ = (id) => document.getElementById(id);
     const connectionStatus = $("connection-status");
@@ -238,6 +238,7 @@
     const chessArea = $("chess-area");
     const cells = [];
     let database;
+    let accountDatabase;
     let currentUid = null;
     let Chess = null;
     let activeRoomCode = null;
@@ -253,6 +254,7 @@
     let currentUidInitialized = false;
     let autoJoinedRoomCode = null;
     let classroomTabChannel = null;
+    let playerNameEdited = false;
     const passcodeGate = $("passcode-gate");
     const passcodeForm = $("passcode-form");
     const passcodeInput = $("passcode-input");
@@ -352,23 +354,16 @@
         return `Firebase denied ${operation}. Check classroomRooms read/write and validation rules${databaseUrl ? ` in ${databaseUrl}` : ""}, then publish them.`;
     }
 
-    function updatePublicRoom(roomCode, roomData) {
-        const listingRef = ref(database, `classroomPublicRooms/${roomCode}`);
-        if (roomData.status !== "waiting" || roomData.isPrivate === true) return remove(listingRef);
-        return set(listingRef, {
-            game: roomData.game || "tic-tac-toe",
-            hostName: roomData.names && roomData.names.x ? roomData.names.x : "Player",
-            createdAt: roomData.createdAt
-        });
-    }
-
     function renderPublicRooms(rooms) {
         const roomList = $("room-list");
         const entries = Object.entries(rooms || {}).filter(([code, item]) =>
             /^[A-HJ-NP-Z2-9]{6}$/.test(code)
             && item
+            && item.status === "waiting"
+            && item.isPrivate !== true
             && ["tic-tac-toe", "chess"].includes(item.game)
-            && typeof item.hostName === "string"
+            && item.names
+            && typeof item.names.x === "string"
             && typeof item.createdAt === "number"
         );
         $("room-count").textContent = entries.length ? `(${entries.length})` : "";
@@ -385,7 +380,7 @@
             card.className = "room-card";
             const details = document.createElement("div");
             const title = document.createElement("strong");
-            title.textContent = `${gameLabel(room.game)} · ${room.hostName}`;
+            title.textContent = `${gameLabel(room.game)} · ${room.names.x}`;
             const meta = document.createElement("p");
             meta.textContent = `Room ${code}`;
             details.append(title, meta);
@@ -406,6 +401,7 @@
         empty.className = "muted";
         empty.textContent = "No messages yet. Say hello!";
         $("chat-messages").replaceChildren(empty);
+        $("chat-status").textContent = "";
         $("chat-input").disabled = true;
         $("chat-send").disabled = true;
     }
@@ -431,9 +427,10 @@
         stopChatListener = onChildAdded(chatQuery, (snapshot) => addChatMessage(snapshot.val()), (error) => {
             console.error("Multiplayer room chat could not be loaded", error);
             $("chat-status").textContent = isPermissionDenied(error)
-                ? "Firebase denied chat access. Check classroomRoomChats rules and confirm this account is a room member."
+                ? "Firebase denied chat access. Publish the classroomRoomChats rules and confirm this room's player IDs match this tab's Firebase account."
                 : "Chat could not load. Check the Firebase room chat rules.";
         });
+        $("chat-status").textContent = "";
         $("chat-input").disabled = false;
         $("chat-send").disabled = false;
     }
@@ -465,16 +462,16 @@
         const isWhite = piece.color === "w";
         const fill = isWhite ? "#f8f6ef" : "#29332f";
         const stroke = isWhite ? "#37433d" : "#e7e9df";
-        const shapes = {
-            k: '<path d="M46 9h8v9h9v8h-9v8h-8v-8h-9v-8h9z"/><path d="M33 40c-7-8-2-13 5-11 3 1 6 4 8 8 3-4 6-7 10-8 8-2 12 4 5 12l-4 7 8 25H35l8-25z"/>',
-            q: '<circle cx="24" cy="24" r="6"/><circle cx="50" cy="16" r="6"/><circle cx="76" cy="24" r="6"/><circle cx="35" cy="31" r="5"/><circle cx="65" cy="31" r="5"/><path d="m23 32 9 5 7-12 11 14 11-14 7 12 9-5-8 39H31z"/>',
-            r: '<path d="M25 18h12v12h8V18h12v12h8V18h12v24l-8 7 5 24H34l5-24-8-7z"/>',
-            b: '<path d="M50 12c-17 12-20 22-8 35l-9 26h34l-9-26c12-13 9-23-8-35z"/><path d="m39 36 22 18M34 73h32"/>',
-            n: '<path d="M30 75c4-13 1-19-7-28 4-3 9-5 15-5-2-9 2-19 13-29 2 8 7 11 15 13 9 3 14 10 12 20l-4 29z"/><circle cx="62" cy="39" r="2.5" fill="' + stroke + '" stroke="none"/>',
-            p: '<circle cx="50" cy="27" r="13"/><path d="M42 41c-1 11-9 17-12 31h40c-3-14-11-20-12-31z"/>'
+        const icons = {
+            k: [448, "M224 0c17.7 0 32 14.3 32 32l0 16 16 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-16 0 0 48 152 0c22.1 0 40 17.9 40 40c0 5.3-1 10.5-3.1 15.4L368 400 80 400 3.1 215.4C1 210.5 0 205.3 0 200c0-22.1 17.9-40 40-40l152 0 0-48-16 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l16 0 0-16c0-17.7 14.3-32 32-32zM38.6 473.4L80 432l288 0 41.4 41.4c4.2 4.2 6.6 10 6.6 16c0 12.5-10.1 22.6-22.6 22.6L54.6 512C42.1 512 32 501.9 32 489.4c0-6 2.4-11.8 6.6-16z"],
+            q: [512, "M256 0a56 56 0 1 1 0 112A56 56 0 1 1 256 0zM134.1 143.8c3.3-13 15-23.8 30.2-23.8c12.3 0 22.6 7.2 27.7 17c12 23.2 36.2 39 64 39s52-15.8 64-39c5.1-9.8 15.4-17 27.7-17c15.3 0 27 10.8 30.2 23.8c7 27.8 32.2 48.3 62.1 48.3c10.8 0 21-2.7 29.8-7.4c8.4-4.4 18.9-4.5 27.6 .9c13 8 17.1 25 9.2 38L399.7 400 384 400l-40.4 0-175.1 0L128 400l-15.7 0L5.4 223.6c-7.9-13-3.8-30 9.2-38c8.7-5.3 19.2-5.3 27.6-.9c8.9 4.7 19 7.4 29.8 7.4c29.9 0 55.1-20.5 62.1-48.3zM256 224s0 0 0 0s0 0 0 0s0 0 0 0zM112 432l288 0 41.4 41.4c4.2 4.2 6.6 10 6.6 16c0 12.5-10.1 22.6-22.6 22.6L86.6 512C74.1 512 64 501.9 64 489.4c0-6 2.4-11.8 6.6-16L112 432z"],
+            r: [448, "M32 192L32 48c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16l0 40c0 4.4 3.6 8 8 8l32 0c4.4 0 8-3.6 8-8l0-40c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16l0 40c0 4.4 3.6 8 8 8l32 0c4.4 0 8-3.6 8-8l0-40c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16l0 144c0 10.1-4.7 19.6-12.8 25.6L352 256l16 144L80 400 96 256 44.8 217.6C36.7 211.6 32 202.1 32 192zm176 96l32 0c8.8 0 16-7.2 16-16l0-48c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 48c0 8.8 7.2 16 16 16zM22.6 473.4L64 432l320 0 41.4 41.4c4.2 4.2 6.6 10 6.6 16c0 12.5-10.1 22.6-22.6 22.6L38.6 512C26.1 512 16 501.9 16 489.4c0-6 2.4-11.8 6.6-16z"],
+            b: [320, "M128 0C110.3 0 96 14.3 96 32c0 16.1 11.9 29.4 27.4 31.7C78.4 106.8 8 190 8 288c0 47.4 30.8 72.3 56 84.7L64 400l192 0 0-27.3c25.2-12.5 56-37.4 56-84.7c0-37.3-10.2-72.4-25.3-104.1l-99.4 99.4c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6L270.8 154.6c-23.2-38.1-51.8-69.5-74.2-90.9C212.1 61.4 224 48.1 224 32c0-17.7-14.3-32-32-32L128 0zM48 432L6.6 473.4c-4.2 4.2-6.6 10-6.6 16C0 501.9 10.1 512 22.6 512l274.7 0c12.5 0 22.6-10.1 22.6-22.6c0-6-2.4-11.8-6.6-16L272 432 48 432z"],
+            n: [448, "M96 48L82.7 61.3C70.7 73.3 64 89.5 64 106.5l0 132.4c0 10.7 5.3 20.7 14.2 26.6l10.6 7c14.3 9.6 32.7 10.7 48.1 3l3.2-1.6c2.6-1.3 5-2.8 7.3-4.5l49.4-37c6.6-5 15.7-5 22.3 0c10.2 7.7 9.9 23.1-.7 30.3L90.4 350C73.9 361.3 64 380 64 400l320 0 28.9-159c2.1-11.3 3.1-22.8 3.1-34.3l0-14.7C416 86 330 0 224 0L83.8 0C72.9 0 64 8.9 64 19.8c0 7.5 4.2 14.3 10.9 17.7L96 48zm24 68a20 20 0 1 1 40 0a20 20 0 1 1 -40 0zM22.6 473.4c-4.2 4.2-6.6 10-6.6 16C16 501.9 26.1 512 38.6 512l370.7 0c12.5 0 22.6-10.1 22.6-22.6c0-6-2.4-11.8-6.6-16L384 432 64 432 22.6 473.4z"],
+            p: [320, "M215.5 224c29.2-18.4 48.5-50.9 48.5-88c0-57.4-46.6-104-104-104S56 78.6 56 136c0 37.1 19.4 69.6 48.5 88L96 224c-17.7 0-32 14.3-32 32c0 16.5 12.5 30 28.5 31.8L80 400l160 0L227.5 287.8c16-1.8 28.5-15.3 28.5-31.8c0-17.7-14.3-32-32-32l-8.5 0zM22.6 473.4c-4.2 4.2-6.6 10-6.6 16C16 501.9 26.1 512 38.6 512l242.7 0c12.5 0 22.6-10.1 22.6-22.6c0-6-2.4-11.8-6.6-16L256 432 64 432 22.6 473.4z"]
         };
-        const base = '<path d="M29 76h42l7 8H22zM25 86h50v7H25z"/>';
-        return `<svg class="chess-piece" viewBox="0 0 100 100" aria-hidden="true" focusable="false" fill="${fill}" stroke="${stroke}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">${shapes[piece.type]}${base}</svg>`;
+        const [width, path] = icons[piece.type];
+        return `<svg class="chess-piece" viewBox="0 0 ${width} 512" aria-hidden="true" focusable="false" fill="${fill}" stroke="${stroke}" stroke-width="8" stroke-linejoin="round"><path d="${path}"/></svg>`;
     }
 
     function renderChess(roomData, side) {
@@ -577,11 +574,6 @@
             }
             const updatedRoom = snapshot.val();
             renderRoom(updatedRoom);
-            updatePublicRoom(code, updatedRoom).catch((error) => {
-                console.error("Public room listing could not be updated", error);
-                $("room-status").textContent = "The room is open, but its public listing could not update. Check the Firebase rules.";
-                $("room-status").classList.add("error");
-            });
         }, (error) => {
             console.error("Multiplayer room listener failed", error);
             $("game-status").textContent = "Room updates stopped. Check the Realtime Database rules and reload.";
@@ -606,14 +598,15 @@
         $("create-button").disabled = !allowed || !currentUid;
         $("join-button").disabled = !allowed || !currentUid;
         if (allowed && currentUid && stopPublicRoomListener === null) {
-            stopPublicRoomListener = onValue(ref(database, "classroomPublicRooms"), (snapshot) => {
+            const publicRoomsQuery = query(ref(database, "classroomRooms"), orderByChild("isPrivate"), equalTo(false));
+            stopPublicRoomListener = onValue(publicRoomsQuery, (snapshot) => {
                 renderPublicRooms(snapshot.val());
             }, (error) => {
                 console.error("Public multiplayer rooms could not be loaded", error);
                 $("room-list").innerHTML = '<p class="empty-list">Public rooms could not load. Check the Firebase multiplayer room rules.</p>';
                 setLobbyStatus(isPermissionDenied(error)
-                    ? "Firebase denied public room listing. Check classroomPublicRooms/.read in the published rules."
-                    : "Public room listing is unavailable. Check the current Firebase rules.", true);
+                    ? "Firebase denied room listing. Publish the classroomRooms/.read rule from the setup guide."
+                    : "Room listing is unavailable. Check the current Firebase rules.", true);
             });
         }
         if (!allowed) {
@@ -718,12 +711,6 @@
             const roomData = result.snapshot.val();
             if (result.committed && roomData && roomData.players.x === currentUid) {
                 showRoom(code, roomRef, roomData);
-                if (!isPrivate) {
-                    try { await updatePublicRoom(code, roomData); } catch (error) {
-                        console.error("Public room could not be listed", error);
-                        $("game-status").textContent = "Room created, but it could not be listed publicly. Publish the latest Firebase rules; you can still share its invite link.";
-                    }
-                }
                 return;
             }
         }
@@ -764,16 +751,6 @@
             throw new Error("Your player slot was not claimed. Check that the latest multiplayer room rules are published.");
         }
         showRoom(code, roomRef, roomData);
-        try {
-            await updatePublicRoom(code, {
-                ...roomData,
-                game: roomData.game || "tic-tac-toe",
-                isPrivate: roomData.isPrivate === true
-            });
-        } catch (error) {
-            console.error("Public room listing could not be refreshed", error);
-            $("game-status").textContent = "You joined, but the public room list could not update. Publish the latest Firebase rules.";
-        }
     }
 
     async function playTicMove(index) {
@@ -907,14 +884,20 @@
                 uid: currentUid,
                 name: (playerName.value.trim() || "Player").slice(0, 20),
                 text: text.slice(0, 300),
-                createdAt: serverTimestamp()
+                createdAt: Date.now()
             });
             $("chat-input").value = "";
             $("chat-status").textContent = "";
         } catch (error) {
             console.error("Multiplayer room chat message failed", error);
-            $("chat-status").textContent = "Message could not be sent. Check the Firebase multiplayer chat rules.";
-        } finally { $("chat-send").disabled = false; }
+            $("chat-status").textContent = isPermissionDenied(error)
+                ? "Firebase denied the message. Publish the classroomRoomChats rules and confirm your Firebase account is a player in this room."
+                : "Message could not be sent. Check your connection and the Firebase room chat rules.";
+        } finally { $("chat-send").disabled = !activeRoomCode; }
+    });
+
+    playerName.addEventListener("input", () => {
+        playerNameEdited = true;
     });
 
     $("copy-link").addEventListener("click", async () => {
@@ -1015,6 +998,23 @@
             const app = initializeApp(config, `multiplayer-${tabId}`);
             auth = getAuth(app);
             database = getDatabase(app);
+            const accountApp = initializeApp(config);
+            const accountAuth = getAuth(accountApp);
+            accountDatabase = getDatabase(accountApp);
+            onAuthStateChanged(accountAuth, async (accountUser) => {
+                if (!accountUser || accountUser.isAnonymous || playerNameEdited) return;
+                try {
+                    const profileSnapshot = await get(ref(accountDatabase, `profiles/${accountUser.uid}`));
+                    const profile = profileSnapshot.val();
+                    if (!playerNameEdited && profile && typeof profile.name === "string") {
+                        playerName.value = profile.name;
+                    }
+                } catch (error) {
+                    console.warn("The signed-in account's player name could not be loaded", error);
+                }
+            }, (error) => {
+                console.warn("The signed-in account could not be checked for a player name", error);
+            });
         } catch (error) {
             console.error("Multiplayer Firebase initialization failed", error);
             connectionStatus.textContent = "Could not connect to multiplayer games. Check the Firebase configuration.";
