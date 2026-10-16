@@ -456,7 +456,7 @@
                     if (activeRoomCode === code) $("chat-status").textContent = message;
                 });
             } else {
-                $("chat-status").textContent = "Chat could not load. Check the Firebase room chat rules.";
+                $("chat-status").textContent = `Chat could not load (${error.code || "Firebase error"}): ${error.message || "Check the Firebase room chat rules."}`;
             }
         });
         $("chat-status").textContent = "";
@@ -973,7 +973,7 @@
             console.error("Multiplayer room chat message failed", error);
             $("chat-status").textContent = isPermissionDenied(error)
                 ? await roomChatPermissionMessage(roomCode)
-                : "Message could not be sent. Check your connection and the Firebase room chat rules.";
+                : `Message could not be sent (${error.code || "Firebase error"}): ${error.message || "Check your connection and the Firebase room chat rules."}`;
         } finally { $("chat-send").disabled = !activeRoomCode; }
     });
 

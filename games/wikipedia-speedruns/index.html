@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#121212">
+    <title>Wikipedia Speedruns | Arcade Hub</title>
+    <style>
+        :root { color-scheme: dark; --bg: #121212; --card: #1e1e1e; --raised: #252a27; --text: #e0e0e0; --muted: #a9b4aa; --accent: #00ff88; --line: #39453e; --danger: #ff9d91; }
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; padding: 24px; background: var(--bg); color: var(--text); font: 16px "Segoe UI", sans-serif; }
+        body[data-theme="ocean"] { --bg: #102027; --card: #1b3038; --raised: #243d46; --text: #e2f1f4; --muted: #aec2c7; --accent: #58d3e5; --line: #39545d; }
+        body[data-theme="ember"] { --bg: #211815; --card: #30221d; --raised: #3a2b25; --text: #f4e8df; --muted: #c9b5a9; --accent: #ff9a62; --line: #5b4035; }
+        body[data-accent="mint"] { --accent: #00e88b; }
+        body[data-accent="blue"] { --accent: #63a6ff; }
+        body[data-accent="coral"] { --accent: #ff7e89; }
+        body[data-accent="gold"] { --accent: #ffc857; }
+        body[data-accent="aqua"] { --accent: #4dd0e1; }
+        button, input { font: inherit; }
+        button, input { min-height: 42px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; }
+        button { background: var(--accent); color: #101713; font-weight: 750; cursor: pointer; }
+        button:disabled { cursor: not-allowed; opacity: .55; }
+        button.secondary, input { background: var(--raised); color: var(--text); }
+        a { color: var(--accent); }
+        [hidden] { display: none !important; }
+        :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+        .page { width: min(1080px, 100%); margin: 0 auto; }
+        .topbar, .room-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .topbar { margin-bottom: 18px; }
+        .topbar h1 { margin: 0; color: var(--accent); font-size: clamp(1.5rem, 4vw, 2rem); }
+        .top-actions { display: flex; align-items: center; gap: 12px; }
+        #connection-status, .muted { color: var(--muted); }
+        #connection-status { min-height: 1.4em; margin: 0 0 16px; font-size: .9rem; }
+        .panel { padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+        .lobby-grid { display: grid; grid-template-columns: minmax(270px, .9fr) minmax(0, 1.1fr); gap: 18px; }
+        h2, h3, p { margin-top: 0; }
+        h2 { margin-bottom: 14px; }
+        .fields { display: grid; gap: 13px; }
+        .fields label { display: grid; gap: 6px; font-weight: 650; }
+        .fields input { width: 100%; min-width: 0; }
+        .form-row { display: flex; gap: 8px; }
+        .form-row input { flex: 1; min-width: 0; }
+        .form-row button { flex: 0 0 auto; }
+        .status { min-height: 1.4em; margin: 10px 0 0; color: var(--muted); overflow-wrap: anywhere; }
+        .status.error { color: var(--danger); }
+        .instructions { padding-left: 20px; color: var(--muted); line-height: 1.6; }
+        #room-code { color: var(--accent); letter-spacing: .1em; }
+        .room-top { align-items: flex-start; margin-bottom: 18px; }
+        .room-top h2 { margin-bottom: 5px; }
+        #invite-link { margin: 0; overflow-wrap: anywhere; font-size: .85rem; }
+        .room-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 16px; }
+        .race-panel, .opponent-panel { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--raised); }
+        .race-panel { text-align: center; }
+        #race-status { min-height: 1.4em; color: var(--muted); }
+        .article-tools { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .article-tools button { min-height: 36px; padding: 6px 10px; }
+        .find-tools { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+        .find-tools label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .85rem; }
+        .find-tools input[type="checkbox"] { min-height: 0; width: 16px; height: 16px; accent-color: var(--accent); }
+        #link-search { flex: 1; min-width: 180px; }
+        #link-search[hidden] { display: none; }
+        #article-title { margin: 12px 0 8px; color: var(--accent); }
+        #article-extract { max-height: 190px; overflow: auto; margin: 0 0 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); line-height: 1.55; text-align: left; white-space: pre-wrap; }
+        .link-heading { margin: 14px 0 8px; text-align: left; }
+        #article-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-height: 300px; overflow: auto; }
+        .wiki-link { min-width: 0; overflow: hidden; padding: 8px 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+        .wiki-link:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+        #load-more-links { margin-top: 9px; }
+        .opponent-panel h3 { margin-bottom: 12px; }
+        .player-card { margin-bottom: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); text-align: left; }
+        .player-card strong { display: block; margin-bottom: 5px; color: var(--accent); }
+        .player-card p { margin: 0; color: var(--muted); font-size: .88rem; overflow-wrap: anywhere; }
+        #player-progress { margin: 0; padding: 0; list-style: none; }
+        #player-progress li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+        #player-progress li strong { color: var(--text); }
+        .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+        @media (max-width: 760px) { body { padding: 14px; } .lobby-grid, .room-layout { grid-template-columns: 1fr; } }
+        @media (max-width: 480px) { .topbar, .room-top { align-items: flex-start; flex-direction: column; } .top-actions { width: 100%; justify-content: space-between; } .panel { padding: 15px; } .form-row { align-items: stretch; flex-direction: column; } #article-links { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<main class="page">
+    <header class="topbar">
+        <h1>Wikipedia Speedruns</h1>
+        <div class="top-actions">
+            <a href="../index.html" target="_top">&larr; Back to Arcade Hub</a>
+            <button id="theme-toggle" class="secondary" type="button">Theme: Emerald</button>
+        </div>
+    </header>
+    <p id="connection-status" role="status" aria-live="polite">Connecting to multiplayer...</p>
+    <section id="lobby" class="lobby-grid">
+        <div class="panel">
+            <h2>Set up a run</h2>
+            <div class="fields">
+                <label for="player-name">Your name
+                    <input id="player-name" maxlength="20" autocomplete="nickname" placeholder="Player" value="Player">
+                </label>
+                <label for="source-title">Starting Wikipedia page
+                    <input id="source-title" maxlength="120" placeholder="Example: Earth" value="Earth">
+                </label>
+                <label for="target-title">Destination Wikipedia page
+                    <input id="target-title" maxlength="120" placeholder="Example: Moon" value="Moon">
+                </label>
+                <button id="solo-button" class="secondary" type="button">Start solo run</button>
+                <button id="create-button" type="button" disabled>Create 2-player room</button>
+                <form id="join-form">
+                    <label for="room-input">Join with a room code or invite link</label>
+                    <div class="form-row">
+                        <input id="room-input" maxlength="6" autocomplete="off" placeholder="6-character code" required>
+                        <button id="join-button" class="secondary" type="submit" disabled>Join</button>
+                    </div>
+                </form>
+            </div>
+            <p id="lobby-status" class="status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="panel">
+            <h2>How to play</h2>
+            <ol class="instructions">
+                <li>Choose a starting page and a destination page.</li>
+                <li>Follow article links in the built-in Wikipedia reader. Search and external links don't count as moves.</li>
+                <li>Reach the destination in as few clicks and as little time as possible.</li>
+                <li>For a race, create a room and send your friend its code or invite link. The clock starts when they join.</li>
+            </ol>
+            <p class="muted">Wikipedia article text and links load from the English Wikipedia API. A run can also be played solo.</p>
+        </div>
+    </section>
+    <section id="room" class="panel" hidden>
+        <div class="room-top">
+            <div>
+                <h2>Room <span id="room-code"></span></h2>
+                <p id="run-route" class="muted"></p>
+                <p id="invite-link" class="muted"></p>
+            </div>
+            <div class="actions">
+                <button id="copy-link" class="secondary" type="button">Copy invite</button>
+                <button id="leave-room" class="secondary" type="button">Leave room</button>
+            </div>
+        </div>
+        <div class="room-layout">
+            <section class="race-panel" aria-label="Wikipedia article reader">
+                <p id="race-status" role="status" aria-live="polite">Waiting for another player to join...</p>
+                <div id="article-reader" hidden>
+                    <div class="article-tools">
+                        <button id="back-article" class="secondary" type="button" disabled>&larr; Previous page</button>
+                        <a id="open-wikipedia" href="#" target="_blank" rel="noopener">Open article on Wikipedia</a>
+                    </div>
+                    <h3 id="article-title"></h3>
+                    <p id="article-extract"></p>
+                    <h4 class="link-heading">Article links</h4>
+                    <div class="find-tools">
+                        <label><input id="enable-find-shortcut" type="checkbox" checked> Enable Ctrl+F link search</label>
+                        <input id="link-search" type="search" placeholder="Find a link on this page" aria-label="Find a Wikipedia article link" hidden>
+                    </div>
+                    <div id="article-links" aria-label="Wikipedia article links"></div>
+                    <p id="no-link-matches" class="muted" hidden>No loaded article links match that search.</p>
+                    <button id="load-more-links" class="secondary" type="button" hidden>Load more links</button>
+                </div>
+            </section>
+            <aside class="opponent-panel" aria-label="Race progress">
+                <h3>Race progress</h3>
+                <ul id="player-progress"></ul>
+                <p id="race-timer" class="muted">Timer starts when both players join.</p>
+                <p id="room-error" class="status error" role="status" aria-live="polite"></p>
+            </aside>
+        </div>
+    </section>
+</main>
+<script src="../../chat/chat-config.js"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { browserSessionPersistence, getAuth, setPersistence, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { get, getDatabase, onValue, ref, runTransaction } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+    const $ = (id) => document.getElementById(id);
+    const API_URL = "https://en.wikipedia.org/w/api.php";
+    const ROOM_PATH = "wikipediaSpeedrunRooms";
+    const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let database = null;
+    let currentUid = null;
+    let currentRoom = null;
+    let roomRef = null;
+    let roomCode = null;
+    let side = null;
+    let stopRoomListener = null;
+    let tabChannel = null;
+    let soloRun = false;
+    let pageHistory = [];
+    let currentArticle = null;
+    let loadingArticle = false;
+    let navigationPending = false;
+    let articleContinuation = null;
+    let loadingMoreLinks = false;
+    let loadedArticleLinks = [];
+    let timerInterval = null;
+
+    function setStatus(element, message, error = false) {
+        element.textContent = message;
+        element.classList.toggle("error", error);
+    }
+
+    function safeStorageGet(key) {
+        try { return localStorage.getItem(key); } catch (error) {
+            console.warn("Theme preference could not be read", error);
+            return null;
+        }
+    }
+
+    function applyTheme(theme) {
+        const valid = ["emerald", "ocean", "ember", "custom"];
+        const selected = valid.includes(theme) ? theme : "emerald";
+        document.body.dataset.theme = selected;
+        if (selected === "custom") {
+            try {
+                const colors = JSON.parse(safeStorageGet("arcade-custom-theme") || "{}");
+                const validColor = (value) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+                if (validColor(colors.primary)) document.body.style.setProperty("--accent", colors.primary);
+                if (validColor(colors.background)) document.body.style.setProperty("--bg", colors.background);
+                if (validColor(colors.card)) document.body.style.setProperty("--card", colors.card);
+                if (validColor(colors.text)) document.body.style.setProperty("--text", colors.text);
+            } catch (error) {
+                console.warn("Custom appearance could not be read", error);
+            }
+        }
+        $("theme-toggle").textContent = `Theme: ${selected.charAt(0).toUpperCase()}${selected.slice(1)}`;
+    }
+
+    function initialTheme() {
+        if (safeStorageGet("arcade-theme")) return safeStorageGet("arcade-theme");
+        try {
+            if (window.parent !== window) {
+                const parentBody = window.parent.document.body;
+                const globalTheme = parentBody.dataset.globalTheme || parentBody.dataset.theme;
+                const accent = parentBody.dataset.globalAccent || parentBody.dataset.accent;
+                if (accent) document.body.dataset.accent = accent;
+                return globalTheme || "emerald";
+            }
+        } catch (error) {
+            console.warn("Arcade theme could not be read from the parent page", error);
+        }
+        return "emerald";
+    }
+
+    applyTheme(initialTheme());
+    $("theme-toggle").addEventListener("click", () => {
+        const themes = ["emerald", "ocean", "ember", "custom"];
+        const next = themes[(themes.indexOf(document.body.dataset.theme) + 1) % themes.length];
+        applyTheme(next);
+        try { localStorage.setItem("arcade-theme", next); } catch (error) {
+            console.warn("Theme preference could not be saved", error);
+        }
+    });
+
+    function cleanTitle(title) {
+        return title.trim().replace(/_/g, " ").replace(/\s+/g, " ");
+    }
+
+    function sameTitle(left, right) {
+        return cleanTitle(left).toLocaleLowerCase() === cleanTitle(right).toLocaleLowerCase();
+    }
+
+    async function getArticle(title, continuation = null) {
+        const parameters = {
+            action: "query",
+            format: "json",
+            formatversion: "2",
+            prop: "extracts|links",
+            exchars: "3500",
+            explaintext: "1",
+            plnamespace: "0",
+            pllimit: "50",
+            redirects: "1",
+            origin: "*",
+            titles: cleanTitle(title)
+        };
+        if (continuation) parameters.plcontinue = continuation;
+        const url = new URL(API_URL);
+        url.search = new URLSearchParams(parameters);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Wikipedia returned HTTP ${response.status}.`);
+        const result = await response.json();
+        if (result.error) throw new Error(result.error.info || "Wikipedia could not load that page.");
+        const page = result.query && result.query.pages && result.query.pages[0];
+        if (!page || page.missing !== undefined) throw new Error(`Wikipedia page "${cleanTitle(title)}" was not found.`);
+        return {
+            title: page.title,
+            extract: page.extract || "This article has no introductory text.",
+            links: (page.links || []).map((link) => link.title).filter((link) => typeof link === "string"),
+            continuation: result.continue && result.continue.plcontinue
+        };
+    }
+
+    function createCode() {
+        let code = "";
+        for (let index = 0; index < 6; index += 1) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+        return code;
+    }
+
+    function createTabId() {
+        return globalThis.crypto && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    async function getTabId() {
+        let tabId;
+        try {
+            tabId = sessionStorage.getItem("wikipedia-speedrun-tab-id");
+            if (!tabId) {
+                tabId = createTabId();
+                sessionStorage.setItem("wikipedia-speedrun-tab-id", tabId);
+            }
+        } catch (error) {
+            console.warn("Wikipedia speedrun tab identity could not be saved", error);
+            return createTabId();
+        }
+        if (typeof BroadcastChannel !== "function") return tabId;
+        while (true) {
+            const instanceId = createTabId();
+            let channel;
+            try {
+                channel = new BroadcastChannel(`wikipedia-speedrun-tab-${tabId}`);
+            } catch (error) {
+                console.warn("Wikipedia speedrun tabs could not be checked for duplicate identities", error);
+                return tabId;
+            }
+            let alreadyInUse = false;
+            channel.addEventListener("message", (event) => {
+                const message = event.data;
+                if (!message || message.instanceId === instanceId) return;
+                if (message.type === "claim") channel.postMessage({ type: "occupied", instanceId, target: message.instanceId });
+                else if (message.type === "occupied" && message.target === instanceId) alreadyInUse = true;
+            });
+            channel.postMessage({ type: "claim", instanceId });
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            if (!alreadyInUse) {
+                tabChannel = channel;
+                return tabId;
+            }
+            channel.close();
+            tabId = createTabId();
+            try {
+                sessionStorage.setItem("wikipedia-speedrun-tab-id", tabId);
+            } catch (error) {
+                console.warn("A unique Wikipedia speedrun tab identity could not be saved", error);
+                return tabId;
+            }
+        }
+    }
+
+    function displayName() {
+        return $("player-name").value.trim().slice(0, 20) || "Player";
+    }
+
+    function getCurrentSide() {
+        if (soloRun) return "x";
+        if (!currentRoom || !currentUid || !currentRoom.players) return null;
+        if (currentRoom.players.x === currentUid) return "x";
+        if (currentRoom.players.o === currentUid) return "o";
+        return null;
+    }
+
+    function setRoomStatus(text, error = false) {
+        setStatus($("room-error"), text, error);
+    }
+
+    function formatTime(milliseconds) {
+        const total = Math.max(0, Math.floor(milliseconds / 1000));
+        return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+    }
+
+    function renderProgress() {
+        const list = $("player-progress");
+        list.replaceChildren();
+        const labels = currentRoom ? currentRoom.names || {} : { x: displayName() };
+        const progress = currentRoom ? currentRoom.progress || {} : { x: { page: currentArticle ? currentArticle.title : "Loading", clicks: pageHistory.length, finishedAt: null } };
+        for (const playerSide of ["x", "o"]) {
+            if (!labels[playerSide] && !progress[playerSide]) continue;
+            const item = document.createElement("li");
+            const name = document.createElement("strong");
+            const state = document.createElement("span");
+            name.textContent = `${playerSide === "x" ? "Player 1" : "Player 2"} · ${labels[playerSide] || "Waiting"}`;
+            const current = progress[playerSide] || {};
+            state.textContent = current.finishedAt
+                ? `Finished · ${current.clicks} clicks`
+                : `${current.page || "Waiting"} · ${current.clicks || 0} clicks`;
+            item.append(name, state);
+            list.appendChild(item);
+        }
+    }
+
+    function renderRoom(room) {
+        currentRoom = room;
+        side = getCurrentSide();
+        $("run-route").textContent = `${room.source} → ${room.target}`;
+        $("room-code").textContent = roomCode || "SOLO";
+        $("article-reader").hidden = room.status === "waiting";
+        $("race-status").textContent = room.status === "waiting"
+            ? "Waiting for another player to join..."
+            : room.status === "won"
+                ? `${room.names[room.winner] || "A player"} reached the destination first!`
+                : room.status === "playing"
+                    ? room.progress[side] && room.progress[side].finishedAt
+                        ? "You reached the destination. Waiting for the other player..."
+                        : "Follow the article links to reach the destination page."
+                    : "This run has ended.";
+        $("back-article").disabled = !pageHistory.length || loadingArticle;
+        renderProgress();
+        if (room.startedAt) {
+            const elapsed = room.progress && room.progress[side] && room.progress[side].finishedAt
+                ? room.progress[side].finishedAt - room.startedAt
+                : Date.now() - room.startedAt;
+            $("race-timer").textContent = `Your time: ${formatTime(elapsed)}`;
+        } else {
+            $("race-timer").textContent = soloRun ? `Your time: ${formatTime(Date.now() - room.startedAt)}` : "Timer starts when both players join.";
+        }
+        const playerProgress = room.progress && room.progress[side];
+        const articleTitle = playerProgress && playerProgress.page || room.source;
+        if (room.status !== "waiting" && (!currentArticle || !sameTitle(currentArticle.title, articleTitle))) {
+            loadArticle(articleTitle);
+        }
+    }
+
+    function attachRoom(code, reference) {
+        if (stopRoomListener) stopRoomListener();
+        roomCode = code;
+        roomRef = reference;
+        soloRun = false;
+        pageHistory = [];
+        currentArticle = null;
+        $("lobby").hidden = true;
+        $("room").hidden = false;
+        $("room-code").textContent = code;
+        const invite = new URL(window.location.href);
+        invite.searchParams.set("room", code);
+        $("invite-link").textContent = invite.href;
+        history.replaceState(null, "", invite.href);
+        setRoomStatus("");
+        stopRoomListener = onValue(reference, (snapshot) => {
+            if (!snapshot.exists()) {
+                leaveRoom("This room no longer exists.");
+                return;
+            }
+            renderRoom(snapshot.val());
+        }, (error) => {
+            console.error("Wikipedia speedrun room listener failed", error);
+            setRoomStatus(`Room updates failed (${error.code || "Firebase error"}): ${error.message || "Check the Firebase database rules."}`, true);
+        });
+    }
+
+    function openSoloRun(source, target) {
+        soloRun = true;
+        roomCode = null;
+        roomRef = null;
+        side = "x";
+        pageHistory = [];
+        currentArticle = null;
+        currentRoom = {
+            source,
+            target,
+            status: "playing",
+            startedAt: Date.now(),
+            winner: null,
+            names: { x: displayName() },
+            progress: { x: { page: source, clicks: 0, finishedAt: null } }
+        };
+        $("lobby").hidden = true;
+        $("room").hidden = false;
+        $("room-code").textContent = "SOLO";
+        $("invite-link").textContent = "Solo run";
+        $("run-route").textContent = `${source} → ${target}`;
+        renderRoom(currentRoom);
+    }
+
+    async function validateRoute() {
+        const sourceInput = cleanTitle($("source-title").value);
+        const targetInput = cleanTitle($("target-title").value);
+        if (!sourceInput || !targetInput) throw new Error("Enter both a starting page and a destination page.");
+        if (sameTitle(sourceInput, targetInput)) throw new Error("Choose two different Wikipedia pages.");
+        const [source, target] = await Promise.all([getArticle(sourceInput), getArticle(targetInput)]);
+        if (sameTitle(source.title, target.title)) throw new Error("The starting page and destination resolve to the same Wikipedia article.");
+        return { source: source.title, target: target.title };
+    }
+
+    async function createRoom() {
+        const route = await validateRoute();
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            const code = createCode();
+            const reference = ref(database, `${ROOM_PATH}/${code}`);
+            const room = {
+                players: { x: currentUid, o: null },
+                names: { x: displayName(), o: null },
+                source: route.source,
+                target: route.target,
+                status: "waiting",
+                winner: null,
+                startedAt: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                progress: {
+                    x: { page: route.source, clicks: 0, finishedAt: null },
+                    o: null
+                }
+            };
+            const result = await runTransaction(reference, (existing) => existing || room);
+            const data = result.snapshot.val();
+            if (result.committed && data && data.players.x === currentUid) {
+                attachRoom(code, reference);
+                return;
+            }
+        }
+        throw new Error("Could not reserve a room code. Please try again.");
+    }
+
+    async function joinRoom(code) {
+        const reference = ref(database, `${ROOM_PATH}/${code}`);
+        const snapshot = await get(reference);
+        if (!snapshot.exists()) throw new Error("That speedrun room was not found. Check the code and try again.");
+        let original = snapshot.val();
+        let usedInitial = false;
+        const result = await runTransaction(reference, (room) => {
+            if (!room && !usedInitial) {
+                room = original;
+                usedInitial = true;
+            }
+            if (!room || !room.players) return;
+            if (room.players.x === currentUid || room.players.o === currentUid) return room;
+            if (room.status !== "waiting" || room.players.o) return;
+            return {
+                ...room,
+                players: { ...room.players, o: currentUid },
+                names: { ...room.names, o: displayName() },
+                progress: { ...room.progress, o: { page: room.source, clicks: 0, finishedAt: null } },
+                startedAt: Date.now(),
+                updatedAt: Date.now(),
+                status: "playing"
+            };
+        });
+        const room = result.snapshot.val() || (await get(reference)).val();
+        if (!room || !room.players || (room.players.x !== currentUid && room.players.o !== currentUid)) {
+            if (room && room.players && room.players.o) throw new Error("This speedrun room already has two players.");
+            throw new Error("Could not join the room. Check the latest Wikipedia speedrun Firebase rules.");
+        }
+        attachRoom(code, reference);
+    }
+
+    async function loadArticle(title) {
+        if (!currentRoom || loadingArticle) return;
+        loadingArticle = true;
+        $("back-article").disabled = true;
+        $("article-title").textContent = `Loading ${title}...`;
+        $("article-extract").textContent = "";
+        $("article-links").replaceChildren();
+        setRoomStatus("");
+        try {
+            const article = await getArticle(title);
+            if (!currentRoom || !sameTitle(currentRoom.progress[side].page, title)) return;
+            currentArticle = article;
+            articleContinuation = article.continuation || null;
+            $("article-title").textContent = article.title;
+            $("article-extract").textContent = article.extract;
+            $("open-wikipedia").href = `https://en.wikipedia.org/wiki/${encodeURIComponent(article.title.replace(/ /g, "_"))}`;
+            const links = article.links.filter((link) => !sameTitle(link, article.title));
+            $("article-links").replaceChildren();
+            loadedArticleLinks = [];
+            $("link-search").value = "";
+            appendArticleLinks(links);
+            $("load-more-links").hidden = !articleContinuation;
+            $("back-article").disabled = !pageHistory.length;
+        } catch (error) {
+            console.error("Wikipedia article could not be loaded", error);
+            setRoomStatus(error.message || "Wikipedia article could not be loaded.", true);
+            $("article-title").textContent = "Article unavailable";
+        } finally {
+            loadingArticle = false;
+            $("back-article").disabled = !pageHistory.length;
+        }
+    }
+
+    function appendArticleLinks(links) {
+        const searchText = $("link-search").value.trim().toLocaleLowerCase();
+        links.forEach((link) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "wiki-link";
+            button.textContent = link;
+            button.title = link;
+            button.disabled = Boolean(currentRoom && currentRoom.progress[side] && currentRoom.progress[side].finishedAt);
+            button.hidden = !link.toLocaleLowerCase().includes(searchText);
+            loadedArticleLinks.push(button);
+            $("article-links").appendChild(button);
+        });
+        updateFindResults();
+    }
+
+    function updateFindResults() {
+        const searchText = $("link-search").value.trim().toLocaleLowerCase();
+        loadedArticleLinks.forEach((link) => {
+            link.hidden = !link.textContent.toLocaleLowerCase().includes(searchText);
+        });
+        $("no-link-matches").hidden = !searchText || loadedArticleLinks.some((link) => !link.hidden) || !articleContinuation;
+    }
+
+    function setFindOptionEnabled(enabled) {
+        $("link-search").hidden = !enabled;
+        if (!enabled) $("link-search").value = "";
+        updateFindResults();
+    }
+
+    async function loadMoreLinks() {
+        if (!currentArticle || !articleContinuation || loadingMoreLinks) return;
+        const title = currentArticle.title;
+        loadingMoreLinks = true;
+        $("load-more-links").disabled = true;
+        $("load-more-links").textContent = "Loading...";
+        try {
+            const article = await getArticle(title, articleContinuation);
+            if (!currentArticle || !sameTitle(currentArticle.title, title)) return;
+            articleContinuation = article.continuation || null;
+            appendArticleLinks(article.links.filter((link) => !sameTitle(link, title)));
+            updateFindResults();
+        } catch (error) {
+            console.error("Additional Wikipedia links could not be loaded", error);
+            setRoomStatus(error.message || "More article links could not be loaded.", true);
+        } finally {
+            loadingMoreLinks = false;
+            $("load-more-links").disabled = false;
+            $("load-more-links").textContent = "Load more links";
+            $("load-more-links").hidden = !articleContinuation;
+        }
+    }
+
+    async function navigateTo(title, isBack = false) {
+        if (!currentRoom || !side || loadingArticle || navigationPending || currentRoom.status !== "playing") return;
+        const currentProgress = currentRoom.progress[side];
+        if (!currentProgress || currentProgress.finishedAt) return;
+        const activeRoomRef = roomRef;
+        navigationPending = true;
+        let article;
+        try {
+            article = await getArticle(title);
+            if (!currentRoom || roomRef !== activeRoomRef || !currentRoom.progress[side] || currentRoom.status !== "playing") return;
+            if (currentRoom.progress[side].finishedAt) return;
+            if (!isBack && currentArticle) pageHistory.push(currentArticle.title);
+            const isFinish = sameTitle(article.title, currentRoom.target);
+            if (soloRun) {
+                currentRoom.progress.x = {
+                    page: article.title,
+                    clicks: (currentRoom.progress.x.clicks || 0) + 1,
+                    finishedAt: isFinish ? Date.now() : null
+                };
+                if (isFinish) {
+                    currentRoom.status = "won";
+                    currentRoom.winner = "x";
+                }
+                renderRoom(currentRoom);
+                return;
+            }
+            const result = await runTransaction(roomRef, (room) => {
+                if (!room || room.status !== "playing" || !room.progress || !room.progress[side] || room.progress[side].finishedAt) return;
+                const clicks = (room.progress[side].clicks || 0) + 1;
+                const finishedAt = isFinish ? Date.now() : null;
+                const updated = {
+                    ...room,
+                    updatedAt: Date.now(),
+                    progress: {
+                        ...room.progress,
+                        [side]: { page: article.title, clicks, finishedAt }
+                    }
+                };
+                if (finishedAt && !room.winner) {
+                    updated.status = "won";
+                    updated.winner = side;
+                }
+                return updated;
+            });
+            if (!result.committed && isFinish) setRoomStatus("The run has already ended.");
+        } catch (error) {
+            if (currentRoom && roomRef === activeRoomRef) {
+                console.error("Wikipedia speedrun navigation failed", error);
+                setRoomStatus(`Could not navigate (${error.code || "error"}): ${error.message || "Check your connection and try again."}`, true);
+            }
+        } finally {
+            navigationPending = false;
+        }
+    }
+
+    function leaveRoom(message = "") {
+        if (stopRoomListener) stopRoomListener();
+        stopRoomListener = null;
+        currentRoom = null;
+        roomRef = null;
+        roomCode = null;
+        side = null;
+        soloRun = false;
+        currentArticle = null;
+        pageHistory = [];
+        $("room").hidden = true;
+        $("lobby").hidden = false;
+        history.replaceState(null, "", window.location.pathname);
+        setStatus($("lobby-status"), message);
+    }
+
+    async function connect() {
+        const config = window.CHAT_FIREBASE_CONFIG;
+        if (!config || !["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => config[key])) {
+            $("connection-status").textContent = "Two-player rooms are not configured. Check the Firebase setup guide.";
+            return;
+        }
+        try {
+            const tabId = await getTabId();
+            const app = initializeApp(config, `wikipedia-speedrun-${tabId}`);
+            const auth = getAuth(app);
+            database = getDatabase(app);
+            await setPersistence(auth, browserSessionPersistence);
+            const credential = await signInAnonymously(auth);
+            currentUid = credential.user.uid;
+            $("connection-status").textContent = "Connected · multiplayer rooms are ready";
+            $("create-button").disabled = false;
+            $("join-button").disabled = false;
+            const code = new URLSearchParams(window.location.search).get("room");
+            if (code && /^[A-HJ-NP-Z2-9]{6}$/i.test(code)) {
+                $("room-input").value = code.toUpperCase();
+                try { await joinRoom(code.toUpperCase()); } catch (error) {
+                    console.error("Wikipedia speedrun invite could not be joined", error);
+                    setStatus($("lobby-status"), error.message || "Could not join this room.", true);
+                }
+            }
+        } catch (error) {
+            console.error("Wikipedia speedrun Firebase connection failed", error);
+            $("connection-status").textContent = `Multiplayer unavailable (${error.code || "Firebase error"}): ${error.message || "Check Firebase Authentication and the Realtime Database rules."}`;
+        }
+    }
+
+    $("solo-button").addEventListener("click", async () => {
+        $("solo-button").disabled = true;
+        setStatus($("lobby-status"), "Checking both Wikipedia pages...");
+        try {
+            const route = await validateRoute();
+            openSoloRun(route.source, route.target);
+        } catch (error) {
+            setStatus($("lobby-status"), error.message || "Could not start the run.", true);
+        } finally {
+            $("solo-button").disabled = false;
+        }
+    });
+
+    $("create-button").addEventListener("click", async () => {
+        $("create-button").disabled = true;
+        setStatus($("lobby-status"), "Checking pages and creating a room...");
+        try {
+            await createRoom();
+        } catch (error) {
+            console.error("Wikipedia speedrun room could not be created", error);
+            setStatus($("lobby-status"), error.message || "Could not create a room.", true);
+        } finally {
+            $("create-button").disabled = !currentUid;
+        }
+    });
+
+    $("join-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const value = $("room-input").value.trim();
+        const code = value.match(/[A-HJ-NP-Z2-9]{6}/i);
+        if (!code) {
+            setStatus($("lobby-status"), "Enter a valid six-character room code or invite link.", true);
+            return;
+        }
+        $("join-button").disabled = true;
+        setStatus($("lobby-status"), "Joining room...");
+        try {
+            await joinRoom(code[0].toUpperCase());
+        } catch (error) {
+            console.error("Wikipedia speedrun room could not be joined", error);
+            setStatus($("lobby-status"), error.message || "Could not join the room.", true);
+        } finally {
+            $("join-button").disabled = !currentUid;
+        }
+    });
+
+    $("article-links").addEventListener("click", (event) => {
+        const button = event.target.closest(".wiki-link");
+        if (button) navigateTo(button.textContent);
+    });
+    $("load-more-links").addEventListener("click", loadMoreLinks);
+    $("enable-find-shortcut").addEventListener("change", (event) => setFindOptionEnabled(event.target.checked));
+    $("link-search").addEventListener("input", updateFindResults);
+    document.addEventListener("keydown", (event) => {
+        if (!event.ctrlKey && !event.metaKey || event.key.toLowerCase() !== "f" || !$("enable-find-shortcut").checked || $("article-reader").hidden) return;
+        event.preventDefault();
+        $("link-search").hidden = false;
+        $("link-search").focus();
+        $("link-search").select();
+    });
+    $("back-article").addEventListener("click", async () => {
+        const previous = pageHistory.pop();
+        if (!previous) return;
+        await navigateTo(previous, true);
+    });
+    $("leave-room").addEventListener("click", () => leaveRoom());
+    $("copy-link").addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText($("invite-link").textContent);
+            $("copy-link").textContent = "Invite copied";
+            setTimeout(() => { $("copy-link").textContent = "Copy invite"; }, 1600);
+        } catch (error) {
+            console.error("Wikipedia speedrun invite could not be copied", error);
+            setRoomStatus("Could not copy the invite. Copy the room code or link shown above.", true);
+        }
+    });
+    window.addEventListener("beforeunload", () => {
+        if (stopRoomListener) stopRoomListener();
+        if (timerInterval) clearInterval(timerInterval);
+        if (tabChannel) tabChannel.close();
+    });
+    timerInterval = setInterval(() => {
+        if (currentRoom && currentRoom.startedAt) {
+            const progress = currentRoom.progress && currentRoom.progress[side];
+            const elapsed = progress && progress.finishedAt ? progress.finishedAt - currentRoom.startedAt : Date.now() - currentRoom.startedAt;
+            $("race-timer").textContent = `Your time: ${formatTime(elapsed)}`;
+        }
+    }, 1000);
+
+    connect();
+</script>
+</body>
+</html>

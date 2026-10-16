@@ -1062,6 +1062,7 @@
 
         function getGameTitle(folder) {
             if (folder === 'multiplayer-board-games' || folder === 'tictactoe-test') return 'Multiplayer Board Games';
+            if (folder === 'wikipedia-speedruns') return 'Wikipedia Speedruns';
             return folder.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
 

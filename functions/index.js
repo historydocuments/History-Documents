@@ -6,6 +6,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 initializeApp();
 
 const ROOM_INACTIVITY_MS = 2 * 60 * 1000;
+const WIKI_ROOM_RETENTION_MS = 24 * 60 * 60 * 1000;
 
 function hasConnectedPlayers(room) {
     return Object.values(room.presence || {}).some((connected) => connected === true);
@@ -47,4 +48,28 @@ exports.cleanupEmptyClassroomRooms = onSchedule({
     }
 
     if (deletedCount) logger.info("Deleted inactive multiplayer rooms", { deletedCount });
+
+    const wikiRoomsRef = database.ref("wikipediaSpeedrunRooms");
+    const wikiRoomsSnapshot = await wikiRoomsRef.get();
+    const expiredWikiRoomCodes = [];
+    wikiRoomsSnapshot.forEach((roomSnapshot) => {
+        const room = roomSnapshot.val();
+        const updatedAt = Number(room && (room.updatedAt || room.createdAt));
+        if (Number.isFinite(updatedAt) && updatedAt <= now - WIKI_ROOM_RETENTION_MS) {
+            expiredWikiRoomCodes.push(roomSnapshot.key);
+        }
+    });
+
+    let deletedWikiRoomCount = 0;
+    for (const roomCode of expiredWikiRoomCodes) {
+        const result = await wikiRoomsRef.child(roomCode).transaction((room) => {
+            const updatedAt = Number(room && (room.updatedAt || room.createdAt));
+            if (!Number.isFinite(updatedAt) || updatedAt > Date.now() - WIKI_ROOM_RETENTION_MS) return;
+            return null;
+        }, undefined, false);
+
+        if (result.committed) deletedWikiRoomCount += 1;
+    }
+
+    if (deletedWikiRoomCount) logger.info("Deleted expired Wikipedia speedrun rooms", { deletedWikiRoomCount });
 });

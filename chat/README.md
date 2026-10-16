@@ -205,6 +205,88 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
         }
       }
     },
+    "wikipediaSpeedrunRooms": {
+      "$roomCode": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('players/x').val() === auth.uid) || (data.exists() && (data.child('players/x').val() === auth.uid || data.child('players/o').val() === auth.uid || (data.child('status').val() === 'waiting' && data.child('players/o').val() === null && newData.child('players/o').val() === auth.uid && newData.child('players/x').val() === data.child('players/x').val()))))",
+        ".validate": "$roomCode.matches(/^[A-HJ-NP-Z2-9]{6}$/) && newData.hasChildren(['players', 'names', 'source', 'target', 'status', 'createdAt', 'updatedAt', 'progress']) && newData.child('players/x').isString() && (newData.child('players/o').val() === null || newData.child('players/o').isString()) && newData.child('source').isString() && newData.child('target').isString() && newData.child('status').val().matches(/^(waiting|playing|won)$/) && (newData.child('winner').val() === null || newData.child('winner').val().matches(/^(x|o)$/)) && (newData.child('startedAt').val() === null || newData.child('startedAt').isNumber()) && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('progress/x').hasChildren(['page', 'clicks'])",
+        "players": {
+          "x": {
+            ".validate": "newData.isString() && ((!data.exists() && newData.val() === auth.uid) || newData.val() === data.val())"
+          },
+          "o": {
+            ".validate": "newData.val() === null || (newData.isString() && ((!data.exists() && newData.val() === auth.uid) || newData.val() === data.val()))"
+          }
+        },
+        "names": {
+          "x": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "o": {
+            ".validate": "newData.val() === null || (newData.isString() && newData.val().length <= 20)"
+          }
+        },
+        "source": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+        },
+        "target": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+        },
+        "status": {
+          ".validate": "newData.isString() && newData.val().matches(/^(waiting|playing|won)$/)"
+        },
+        "winner": {
+          ".validate": "newData.val() === null || newData.val().matches(/^(x|o)$/)"
+        },
+        "startedAt": {
+          ".validate": "newData.val() === null || newData.isNumber()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "progress": {
+          "x": {
+            ".validate": "newData.hasChildren(['page', 'clicks'])",
+            "page": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+            },
+            "clicks": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000"
+            },
+            "finishedAt": {
+              ".validate": "newData.val() === null || newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "o": {
+            ".validate": "newData.val() === null || newData.hasChildren(['page', 'clicks'])",
+            "page": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+            },
+            "clicks": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000"
+            },
+            "finishedAt": {
+              ".validate": "newData.val() === null || newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "classroomRoomChats": {
       "$roomCode": {
         ".read": "auth != null && (root.child('classroomRooms').child($roomCode).child('players/x').val() === auth.uid || root.child('classroomRooms').child($roomCode).child('players/o').val() === auth.uid)",
@@ -250,11 +332,13 @@ The chat is embedded in `games/index.html` and uses Firebase Authentication and 
 
 The admin control room's **Operations** tab can set or remove a shared site passcode. Publish the rules above for `siteControl/accessGate` before setting it. After a visitor enters the passcode, the salted PBKDF2 hash used to verify it is saved in browser storage and shared across the home page, arcade hub, and Multiplayer Board Games page on that browser. This is only a casual browser-side deterrent: GitHub Pages publishes all static files directly, and the Firebase client-readable hash can be guessed offline. It does not prevent direct access to the other game URLs, so don't use it to protect sensitive content. If the passcode is forgotten, an admin can remove `siteControl/accessGate` in the Firebase console.
 
-The **Multiplayer Board Games** page supports Tic-Tac-Toe and chess, a live room chat, and a public list of waiting rooms. Realtime Database rules must include `classroomRooms` and `classroomRoomChats` as shown above; publish the complete rules before creating or joining rooms. The lobby queries only `classroomRooms` records whose `isPrivate` value is `false`, and the rules require that exact query so private-room records are not listed. Waiting rooms are shown; rooms already in play are omitted. Private rooms can only be joined by someone with their invite code or link (the code is an unlisted invite, not a security boundary). A logged-in account's saved profile name is used as the default player name; each browser tab still uses its own session-scoped Firebase identity, so opening the same room in another tab counts as the second player. The room chat is readable and writable only by the room's two player UIDs. The page reports whether the current tab is actually listed as a room player when Firebase denies chat, and identifies the configured Firebase project/database for rules troubleshooting. The page registers each connected player in the room's `presence` data and updates `lastActiveAt`; the scheduled cleanup removes rooms with no connected players after two minutes of inactivity. Deploy the cleanup function described below for abandoned rooms to be removed automatically. The page uses the open-source [chess.js](https://github.com/jhlywa/chess.js) library for legal chess moves, with castling, en passant, promotion, check, checkmate, and draws including repetition. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
+The **Multiplayer Board Games** page supports Tic-Tac-Toe and chess, a live room chat, and a public list of waiting rooms. Realtime Database rules must include `classroomRooms` and `classroomRoomChats` as shown above; publish the complete rules before creating or joining rooms. If room chat reports `PERMISSION_DENIED`, confirm the latest rules were published to the same database URL shown in `chat-config.js`; the page displays the underlying Firebase error and identifies whether the current tab is listed as a room player. The lobby queries only `classroomRooms` records whose `isPrivate` value is `false`, and the rules require that exact query so private-room records are not listed. Waiting rooms are shown; rooms already in play are omitted. Private rooms can only be joined by someone with their invite code or link (the code is an unlisted invite, not a security boundary). A logged-in account's saved profile name is used as the default player name; each browser tab still uses its own session-scoped Firebase identity, so opening the same room in another tab counts as the second player. The room chat is readable and writable only by the room's two player UIDs. The page registers each connected player in the room's `presence` data and updates `lastActiveAt`; the scheduled cleanup removes rooms with no connected players after two minutes of inactivity. Deploy the cleanup function described below for abandoned rooms to be removed automatically. The page uses the open-source [chess.js](https://github.com/jhlywa/chess.js) library for legal chess moves, with castling, en passant, promotion, check, checkmate, and draws including repetition. Room members can write the room state; this lightweight feature is not intended for sensitive or competitive games.
+
+The **Wikipedia Speedruns** page in `games/wikipedia-speedruns` is a solo or two-player race between two English Wikipedia articles. Players navigate through links in the in-page reader; the room code and invite link share the route and synchronize each player's current page, click count, and winner. The optional **Enable Ctrl+F link search** setting lets Ctrl+F (or Command+F on Mac) search the current article's links. The race timer starts when the second player joins. It uses the `wikipediaSpeedrunRooms` rules shown above; publish those rules before creating or joining a two-player run. The scheduled cleanup removes speedrun rooms that have not been updated for 24 hours.
 
 ### Deploy multiplayer room cleanup
 
-Room cleanup runs as a scheduled Firebase Cloud Function, so the Firebase project must use the Blaze plan and have Cloud Scheduler enabled. From the repository root, install the Functions dependencies, select the same Firebase project and deploy:
+Room cleanup runs as a scheduled Firebase Cloud Function, so the Firebase project must use the Blaze plan and have Cloud Scheduler enabled. It removes empty board-game rooms after two minutes and speedrun rooms after 24 hours without activity. From the repository root, install the Functions dependencies, select the same Firebase project and deploy:
 
 ```sh
 npm --prefix functions install
